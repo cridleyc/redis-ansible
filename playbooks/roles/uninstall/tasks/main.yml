@@ -1,0 +1,9 @@
+---
+- name: checking for rl_uninstall.sh 
+  ansible.builtin.stat:
+    path: "{{ redislabs_path }}/rl_uninstall.sh"
+  register: rluninstallsh
+
+- name: use rl_uninstall for uninstall
+  ansible.builtin.command: "{{ redislabs_path }}/rl_uninstall.sh"
+  when: rluninstallsh.stat.exists == True

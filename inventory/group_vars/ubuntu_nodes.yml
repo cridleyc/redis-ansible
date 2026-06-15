@@ -1,0 +1,139 @@
+---
+# Guide for group variables used by these playbooks.
+#
+# Recommended usage:
+# 1. Copy the "global" section into inventory/group_vars/all/main.yaml
+# 2. Copy the "cluster" section into inventory/group_vars/<group_name>.yml
+# 3. Adjust only the variables that apply to your environment.
+#
+# Note:
+# Several operations use separate files/payloads via -e @file
+# (for example databases/, localusers/, json/, and crdbs/). Those payloads
+# are added on top of these base variables; they do not replace them.
+
+# ----------------------------------------------
+# Global section: inventory/group_vars/all/main.yaml
+# ----------------------------------------------
+rl_ansible_vers: 4.0
+ansible_user: "cridleyc"
+redislabs_path: /opt/redislabs/bin
+install_dir: /tmp/re_install
+persistent_path: /var/opt/redislabs/persist
+ephemeral_path: /var/opt/redislabs/tmp
+pause_seconds: 15
+
+# Enable only if the cluster uses flash/bigstore.
+flash_enabled: false
+flash_path: /var/opt/redislabs/flash
+
+# Optional installer settings for custom directories and answer files.
+re_install_answer_file: ""
+re_socket_dir: ""
+re_install_dir: ""
+re_config_dir: ""
+re_var_dir: ""
+re_os_user: ""
+re_os_group: ""
+re_update_env_path: false
+re_skip_dns_port_verification: false
+re_install_extra_args: []
+
+# Optional. This can live here if you do not want to pass it with -e for
+# redis-update-certs.yaml.
+cert_dir: "<path_to_repo_or_certs_directory>"
+
+# Optional. Used by the systune role to add an OS user to the
+# redislabs group. Note: the role consumes 'remuser', not 'runuser'.
+# remuser: "<os_username>"
+
+# ---------------------------------------------
+# Per-cluster section: inventory/group_vars/<group>.yml
+# ---------------------------------------------
+re_url: "https://redis-enterprise-software-downloads.s3.amazonaws.com/8.0.16/redislabs-8.0.16-33-jammy-arm64.tar"
+cluster_name: "redis-enterprise.example.internal"
+username: "admin@example.com"
+password: "redis123"
+
+
+# Optional. Normally redis-update-license.yaml receives:
+#   -e license=/path/to/license
+# and then maps it to re_license internally.
+# re_license: "/path/to/license"
+
+# --------------------------------------------------------------
+# Reference variables for other operations (normally passed via -e)
+# --------------------------------------------------------------
+re_databases:
+  - name: "app-cache"
+    memory_size: 1073741824
+    port: 12000
+#     proxy_policy: all-nodes
+#     sharding: false
+#     replication: true
+#     shards_placement: sparse
+#     # Redis still accepts authentication_redis_pass, but current docs
+#     # mark it deprecated. Keep it only if you need the legacy single-password
+#     # payload shape for compatibility with existing automation.
+#     authentication_redis_pass: "<db_password>"
+
+# Local user:
+# user:
+#   name: "Operations"
+#   email: "ops@example.com"
+#   password: "<user_password>"
+#   role: "admin"
+#   # auth_method is still accepted by the API, but newer docs mark it
+#   # deprecated. Keep it only when you need the legacy payload shape.
+#   auth_method: "regular"
+
+# LDAP:
+# ldap:
+#   uris:
+#     - "ldap://ldap.example.com:389"
+#   bind_dn: "cn=svc_redis,dc=example,dc=com"
+#   bind_pass: "<ldap_bind_password>"
+#   user_dn_template: "cn=%u,dc=example,dc=com"
+#   dn_group_attr: "memberOf"
+
+# LDAP mapping:
+# ldap_mapping:
+#   name: "Admins"
+#   dn: "OU=ops,DC=example,DC=com"
+#   email: "ops@example.com"
+#   role_uids: [1]
+
+# Update LDAP mapping:
+# map_uid: 1001
+
+# Update/delete database:
+# bdb_name: "app-cache"
+# bdb_id: 12345
+# bdb:
+#   name: "app-cache"
+#   shards_count: 2
+
+# Replica-of:
+# src_db_name: "source-db"
+# src_db_port: 12003
+# rplc_db_name: "replica-db"
+# replicadb:
+#   name: "replica-db"
+#   memory_size: 204800
+#   port: 12006
+#   proxy_policy: "all-nodes"
+#   replica_sources:
+#     - compression: 0
+#       uri: "redis://admin:<password>@127.0.0.1:12003"
+
+# CRDBs and localhost-scoped operations:
+# clusterAPI: "api.cluster.example.com:9443"
+# clusterUser: "admin@example.com"
+# clusterPass: "<redis_api_password>"
+# crdb_files: "<path_to_repo>/crdbs/"
+# re_json: "crdb-demo.json"
+# dbname: "global-cache"
+# user1: "admin@cluster-a.example.com"
+# password1: "<password_cluster_a>"
+# user2: "admin@cluster-b.example.com"
+# password2: "<password_cluster_b>"
+# crdb_id: "<crdb_guid>"

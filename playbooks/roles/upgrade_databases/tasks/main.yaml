@@ -1,0 +1,37 @@
+- name: Get the list of databases (CRDBs and BDBs)
+  ansible.builtin.uri:
+    url: "https://{{ inventory_hostname }}:9443/v1/bdbs?fields=uid,crdt_guid,name"
+    method: GET
+    user: "{{ username }}"
+    password: "{{ password }}"
+    force_basic_auth: yes
+    return_content: no
+    validate_certs: no
+    follow_redirects: all
+  ignore_errors: no
+  register: result
+
+- name: "Upgrading BDBs and CRDBs redis version, ignoring errors for already upgraded databases"
+  ansible.builtin.uri:
+    url: "https://{{ inventory_hostname }}:9443/v1/bdbs/{{ item.uid }}/upgrade"
+    method: POST
+    user: "{{ username }}"
+    password: "{{ password }}"
+    force_basic_auth: yes
+    return_content: no
+    validate_certs: no
+    follow_redirects: all
+    body:
+      swap_roles: true
+      may_discard_data: false
+    body_format: json
+  ignore_errors: yes
+  with_items: "{{ result.json }}"
+
+
+- name: "Upgrading CRDBs"
+  ansible.builtin.command: "/opt/redislabs/bin/crdb-cli crdb update --crdb-guid {{ item.crdt_guid }} --featureset-version yes"
+  become: true
+  with_items: "{{ result.json | json_query(server_query) }}"
+  vars:
+    server_query: "[?crdt_guid!='']"

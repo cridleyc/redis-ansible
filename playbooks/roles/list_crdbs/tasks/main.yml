@@ -1,0 +1,29 @@
+---
+- name: Get list of crdbs
+  ansible.builtin.uri:
+    url: "https://{{ clusterAPI }}/v1/crdbs"
+    method: GET
+    user: "{{ clusterUser }}"
+    password: "{{ clusterPass }}"
+    force_basic_auth: yes
+    return_content: no
+    validate_certs: no
+    follow_redirects: all
+  ignore_errors: no
+  register: crdb_list
+  connection: local
+  no_log: true
+
+- set_fact:
+    databases: "{{ crdb_list.json }}"
+
+- set_fact:
+    dblist: ["Database name followed by GUID"]
+
+- set_fact:
+    dblist: "{{ dblist + [ item.name , item.guid ] }}"
+  with_items: "{{databases.crdbs }}"
+  no_log: true
+
+- name: crdbs and guids
+  ansible.builtin.debug: var=dblist

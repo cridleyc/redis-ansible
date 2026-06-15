@@ -1,0 +1,6 @@
+- name: Display variables/facts for host hostvars[inventory_hostname]
+  debug:
+    var: hostvars[inventory_hostname]
+  tags: debug_info
+#  ansible.builtin.debug:
+#    msg: "{{ lookup('file', allfile ) | from_yaml | rl_ansible_vers }}"

@@ -1,0 +1,9 @@
+{"user": {"email": "mike.clapper@redis.com",
+         "password": "admin",
+         "name": "Mike Clapper",
+         "email_alerts": true,
+         "bdbs_email_alerts": ["1"],
+         "role": "db_viewer",
+         "auth_method": "regular"
+         }
+}

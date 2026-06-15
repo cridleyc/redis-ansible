@@ -1,0 +1,43 @@
+{
+  "default_db_config": {
+    "memory_size": 209715200,
+    "port": 12002
+  },
+  "instances": [
+    {
+      "cluster": {
+        "name": "redis-enterprise.south.svc.cluster.local",
+        "url": "https://api.south.34.72.101.34.nip.io:443",
+        "credentials": {
+          "username": "admin@south-cluster.com",
+          "password": "rEQGUKkg"
+        },
+        "replication_endpoint": "testdb2-db.south.34.72.101.34.nip.io:443",
+        "replication_tls_sni": "testdb2-db.south.34.72.101.34.nip.io"
+      },
+      "db_config": {
+        "tls_mode": "enabled",
+        "enforce_client_authentication": "disabled"
+      }
+    },
+    {
+      "cluster": {
+        "name": "redis-enterprise.north.svc.cluster.local",
+        "url": "https://api.north.34.123.193.129.nip.io:443",
+        "credentials": {
+          "username": "admin@north-cluster.com",
+          "password": "f4O74fIY"
+        },
+        "replication_endpoint": "testdb2-db.north.34.123.193.129.nip.io:443",
+        "replication_tls_sni": "testdb2-db.north.34.123.193.129.nip.io"
+      },
+      "db_config": {
+        "tls_mode": "enabled",
+        "enforce_client_authentication": "disabled"
+      }
+    }
+  ],
+  "name": "testdb2",
+  "encryption": true,
+  "port": 12002
+}

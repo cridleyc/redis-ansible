@@ -1,0 +1,4 @@
+---
+- ansible.builtin.debug: 
+    msg: RL ansible bundle version {{ rl_ansible_vers }}
+  delegate_to: localhost

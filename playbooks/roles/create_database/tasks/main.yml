@@ -1,0 +1,47 @@
+- name: getting databases on {{ inventory_hostname }}
+  ansible.builtin.uri:
+    url: "https://{{ inventory_hostname }}:9443/v1/bdbs"
+    user: "{{ username }}"
+    password: "{{ password }}"
+    method: GET
+    force_basic_auth: yes
+    validate_certs: no
+  register: result
+
+- name: "Set Database Name as Fact"
+  ansible.builtin.set_fact:
+    db_name: "{{ item.name }}"
+
+- name: "checking if database '{{ db_name }}' already exists"
+  ansible.builtin.set_fact:
+    db_uid: "{{ result.json | json_query(query) | first | default(\"\") }}"
+  vars:
+    query: "[?name=='{{ db_name }}'].uid"
+  ignore_errors: yes 
+
+- name: "creating database on {{ inventory_hostname }}"
+  ansible.builtin.uri: 
+    url: "https://{{ inventory_hostname }}:9443/v1/bdbs"
+    user: "{{ username }}"
+    password: "{{ password }}"
+    method: POST
+    body: "{{ item }}"
+    body_format: json
+    force_basic_auth: yes
+    return_content: yes
+    follow_redirects: all
+    validate_certs: no
+  ignore_errors: yes
+  when: db_uid == ""
+
+- name: updating database with latest config on {{ inventory_hostname }}
+  ansible.builtin.uri:
+    url: "https://{{ inventory_hostname }}:9443/v1/bdbs/{{ db_uid }}"
+    user: "{{ username }}"
+    password: "{{ password }}"
+    method: PUT
+    body: "{{ item }}"
+    body_format: json
+    force_basic_auth: yes
+    validate_certs: no
+  when: db_uid != ""

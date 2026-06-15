@@ -1,0 +1,42 @@
+{
+  "default_db_config": {
+    "memory_size": 209715200,
+    "port": 12010
+  },
+  "instances": [
+    {
+      "cluster": {
+        "name": "redis-enterprise.south.svc.cluster.local",
+        "url": "https://api.south.34.72.101.34.nip.io:443",
+        "credentials": {
+          "username": "_user1_",
+          "password": "_password1_"
+        },
+        "replication_endpoint": "_dbname_-db.south.34.72.101.34.nip.io:443",
+        "replication_tls_sni": "_dbname_-db.south.34.72.101.34.nip.io"
+      },
+      "db_config": {
+        "tls_mode": "enabled",
+        "enforce_client_authentication": "disabled"
+      }
+    },
+    {
+      "cluster": {
+        "name": "redis-enterprise.north.svc.cluster.local",
+        "url": "https://api.north.34.123.193.129.nip.io:443",
+        "credentials": {
+          "username": "_user2_",
+          "password": "_password2_"
+        },
+        "replication_endpoint": "_dbname_.north.34.123.193.129.nip.io:443",
+        "replication_tls_sni": "_dbname_-db.north.34.123.193.129.nip.io"
+      },
+      "db_config": {
+        "tls_mode": "enabled",
+        "enforce_client_authentication": "disabled"
+      }
+    }
+  ],
+  "name": "_dbname_",
+  "encryption": true
+}

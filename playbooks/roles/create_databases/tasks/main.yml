@@ -1,0 +1,5 @@
+---
+- name: 'Creating Databases...'
+  loop: "{{ re_databases }}"
+  include_role:
+    name: create_database

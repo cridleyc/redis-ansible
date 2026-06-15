@@ -1,0 +1,178 @@
+# Change Log
+
+## [4.0] - 2026-06-15
+
+Version 4.0 updates the Redis Enterprise Ansible template from the previous 3.0 baseline. This release keeps Redis Enterprise versions, operating systems, package URLs, credentials, and customer-specific parameters configurable so the template can be adapted for future customer deployments.
+
+### Versioning
+
+- Updated the template bundle version from 3.0/3.1 lineage to `4.0`.
+- Updated `rl_ansible_vers` to `4.0` in the active group variables and inventory templates.
+- Added this `CHANGE.log` as the release history file for the updated template.
+
+### Redis Enterprise and Redis Software Compatibility
+
+- Modernized the template for current Redis Enterprise / Redis Software REST API usage while keeping Redis package selection configurable.
+- Replaced deprecated certificate update usage with `PUT /v1/cluster/certificates`.
+- Removed the deprecated bootstrap `policy` payload usage for rack awareness.
+- Added post-bootstrap rack awareness handling with `GET /v1/cluster/policy` and `PUT /v1/cluster/policy`.
+- Replaced legacy master-detection logic that depended on `/v1/access` with documented node APIs:
+  - `GET /v1/bootstrap`
+  - `GET /v1/nodes`
+  - `GET /v1/nodes/status`
+- Kept install package version and platform values configurable through inventory variables and `re_url`, rather than hard-coding the latest Redis Software release.
+
+### Installer and Package Handling
+
+- Added configurable installer arguments for modern `install.sh` usage:
+  - `re_install_answer_file`
+  - `re_socket_dir`
+  - `re_install_dir`
+  - `re_config_dir`
+  - `re_var_dir`
+  - `re_os_user`
+  - `re_os_group`
+  - `re_update_env_path`
+  - `re_skip_dns_port_verification`
+  - `re_install_extra_args`
+- Updated the install role to build the `install.sh` command with `argv` instead of shell-style command concatenation.
+- Added optional support for `--update-env-path`.
+- Added optional support for `--skip-dns-port-verification`.
+- Converted install directory and archive extraction tasks to structured Ansible module arguments.
+- Preserved idempotency for the install bundle extraction and install execution through `creates`.
+
+### Inventory and Template Structure
+
+- Added reusable inventory templates under `inventory/templates/`:
+  - `inventory.yml.template`
+  - `host_vars.yml.template`
+  - `group_vars.yml.template`
+- Expanded group variable examples into a guide-style template for future customer adaptations.
+- Added package platform and package URL composition examples through `redis_package_platform` and `re_url`.
+- Simplified the active sample inventory toward a single-node Ubuntu-style test layout.
+- Removed older customer/environment-specific inventory examples from the updated template tree, including legacy Rocky and spot inventory files.
+- Kept test credentials and sample values in the template where useful for lab and proof-of-concept runs.
+
+### Script Runtime Updates
+
+- Added `scripts/_env.sh` to centralize script path resolution.
+- Updated script wrappers to source `_env.sh`.
+- Made wrapper scripts less dependent on the current working directory.
+- Added helper functions for resolving playbook paths and inventory paths.
+- Preserved support for overriding `re_ansbase` and `re_inv` from the environment.
+- Updated scripts to pass through additional Ansible arguments more consistently.
+
+### Cluster Creation Updates
+
+- Added automatic default IPv4 fact gathering when `internal_ip` is not provided.
+- Added a fail-fast guard when `internal_ip` cannot be determined.
+- Added defaulting of `external_ip` to `internal_ip` when `external_ip` is not supplied.
+- Added cluster bootstrap status checks before create/join actions.
+- Updated cluster create and join payloads to support optional flash/bigstore configuration.
+- Added rack ID handling for rack-aware deployments.
+- Moved rack-aware cluster policy configuration to the documented cluster policy endpoint after bootstrap.
+- Improved final cluster join output so it works for newly bootstrapped and already-joined nodes.
+
+### Certificate Management Updates
+
+- Updated certificate replacement to use the current `PUT /v1/cluster/certificates` endpoint.
+- Changed the certificate request body to the current `certificates` array payload shape.
+- Removed reliance on the deprecated `/v1/cluster/update_cert` path.
+
+### Upgrade Workflow Updates
+
+- Updated upgrade discovery to use documented bootstrap and node status endpoints.
+- Added node-role based master detection from `/v1/nodes/status`.
+- Preserved the ability to skip upgrades where the node already reports the target software version.
+- Kept the upgrade operation based on `install.sh -y` so package selection remains controlled by the configured install bundle.
+
+### Active-Active / CRDB Updates
+
+- Updated CRDB file handling to support configurable CRDB payload locations.
+- Added support for absolute CRDB JSON file paths and repo-relative CRDB payload paths.
+- Moved temporary CRDB JSON rendering to the local temporary directory.
+- Added safe defaults for CRDB placeholder substitutions:
+  - `_user1_`
+  - `_password1_`
+  - `_user2_`
+  - `_password2_`
+  - `_dbname_`
+- Removed an unused `password1` substitution fact that could fail when `password1` was intentionally omitted.
+- Changed CRDB JSON loading from `command: cat` to `slurp` plus JSON parsing.
+- Added `0600` permissions for rendered temporary CRDB JSON files.
+- Preserved CRDB creation through `GET /v1/crdbs`, `POST /v1/crdbs`, and `GET /v1/crdb_tasks/{task_id}`.
+
+### Database and Replica Payload Updates
+
+- Updated replica database example payloads in `databases/`.
+- Preserved database create/update workflows based on `GET /v1/bdbs`, `POST /v1/bdbs`, and `PUT /v1/bdbs/{uid}`.
+- Preserved database upgrade workflow through `POST /v1/bdbs/{uid}/upgrade`.
+- Preserved Active-Active feature upgrade workflow through `crdb-cli crdb update`.
+
+### Local User and Utility Playbook Updates
+
+- Updated local user and version-printing playbooks to align with the revised variable layout.
+- Updated version output to read the bundle version from `rl_ansible_vers`.
+- Kept local user payloads as editable examples for lab and customer-specific adaptation.
+
+### Quorum Node Updates
+
+- Fixed quorum-node task condition handling.
+- Preserved quorum-only node configuration through `rladmin tune node <node_id> quorum_only enabled`.
+
+### LDAP and License Workflows
+
+- Preserved LDAP mapping, LDAP update, and license update workflows.
+- Updated related wrapper scripts to use the shared script environment loader.
+- Kept LDAP and license payloads externalized so customer-specific data can be supplied through variables or files.
+
+### Removed or Replaced From Version 3.0
+
+- Removed direct dependency on deprecated `/v1/cluster/update_cert`.
+- Removed dependency on `/v1/access` for upgrade master detection.
+- Removed deprecated bootstrap `policy` usage for rack awareness.
+- Removed several legacy inventory examples from the updated template tree in favor of reusable inventory templates.
+- Replaced per-script base path handling with the shared `_env.sh` runtime.
+
+### Validation
+
+- `ansible-playbook --syntax-check` passes for all playbooks in the updated project.
+- `ansible-lint --profile min` passes for the updated project.
+- Full strict `ansible-lint` still reports inherited style and convention findings from the original template, mostly task naming, role variable prefixes, YAML truthy values, and existing `ignore_errors` usage. These were not fully refactored in 4.0 to avoid changing unrelated behavior across the template.
+
+### Official Redis Documentation Used for Validation
+
+- Redis Software 8.0 release notes: validates Redis Software 8.x compatibility notes, OpenSSL 3.3 requirements for Redis Software 8.0.16 and later, new reserved ports, and the deprecation of the bootstrap `policy` field in favor of `PUT /v1/cluster/policy`.
+  - https://redis.io/docs/latest/operate/rs/release-notes/rs-8-0-releases/
+- Cluster policy REST API: validates the use of `GET /v1/cluster/policy` and `PUT /v1/cluster/policy` for post-bootstrap cluster policy changes such as rack awareness.
+  - https://redis.io/docs/latest/operate/rs/references/rest-api/requests/cluster/policy/
+- Cluster settings object: validates `rack_aware` as a cluster policy/settings field.
+  - https://redis.io/docs/latest/operate/rs/references/rest-api/objects/cluster_settings/
+- Cluster certificates REST API: validates `GET /v1/cluster/certificates`, `PUT /v1/cluster/certificates`, the `certificates` array payload shape, and the deprecation of `/v1/cluster/update_cert`.
+  - https://redis.io/docs/latest/operate/rs/references/rest-api/requests/cluster/certificates/
+- Bootstrap REST API: validates `GET /v1/bootstrap` and `POST /v1/bootstrap/{action}` for `create_cluster` and `join_cluster` bootstrap flows.
+  - https://redis.io/docs/latest/operate/rs/references/rest-api/requests/bootstrap/
+- Node status REST API: validates `GET /v1/nodes/status` and the node role values used to detect the master node during upgrade workflows.
+  - https://redis.io/docs/latest/operate/rs/references/rest-api/requests/nodes/status/
+- Installation script options: validates `install.sh` options used by the template, including `-y`, `-c`, `-s`, `--install-dir`, `--config-dir`, `--var-dir`, `--os-user`, `--os-group`, `--skip-dns-port-verification`, and `--update-env-path`.
+  - https://redis.io/docs/latest/operate/rs/installing-upgrading/install/install-script/
+- Database REST API: validates `GET /v1/bdbs`, `POST /v1/bdbs`, `PUT /v1/bdbs/{uid}`, and `DELETE /v1/bdbs/{uid}` database lifecycle operations.
+  - https://redis.io/docs/latest/operate/rs/references/rest-api/requests/bdbs/
+- Database upgrade REST API: validates `POST /v1/bdbs/{uid}/upgrade` and the database upgrade request body fields used by the upgrade workflow.
+  - https://redis.io/docs/latest/operate/rs/references/rest-api/requests/bdbs/upgrade/
+- Active-Active database REST API: validates `GET /v1/crdbs`, `POST /v1/crdbs`, `PATCH /v1/crdbs/{crdb_guid}`, and `DELETE /v1/crdbs/{crdb_guid}`.
+  - https://redis.io/docs/latest/operate/rs/references/rest-api/requests/crdbs/
+- CRDB task REST API: validates `GET /v1/crdb_tasks/{task_id}` for polling Active-Active database creation task status.
+  - https://redis.io/docs/latest/operate/rs/references/rest-api/requests/crdb_tasks/
+- `rladmin tune` command reference: validates `rladmin tune node <id> quorum_only enabled|disabled`.
+  - https://redis.io/docs/latest/operate/rs/references/cli-utilities/rladmin/tune/
+- `crdb-cli` command reference: validates use of `crdb-cli` for managing Active-Active databases and Active-Active tasks.
+  - https://redis.io/docs/latest/operate/rs/references/cli-utilities/crdb-cli/
+
+### Compatibility Notes for Future Customer Adaptations
+
+- Redis Enterprise / Redis Software package version, build, OS platform, and download URL remain intentionally configurable.
+- For Redis Software 8.0.16 and later, target hosts must satisfy the OpenSSL requirements documented by Redis.
+- For Redis Software 8.x deployments, validate the required Redis Software reserved ports before installation or upgrade.
+- For Redis 8.0 database deployments, review Redis flash/Flex support before enabling flash-related database configuration.
+- Test credentials included in inventory examples are for lab use only and should be replaced or externalized for customer environments.

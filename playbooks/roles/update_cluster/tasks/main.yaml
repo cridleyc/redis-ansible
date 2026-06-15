@@ -1,0 +1,16 @@
+---
+
+- name: Updating email settings for the cluster
+  ansible.builtin.uri:
+    url: https://{{ inventory_hostname }}:9443/v1/cluster
+    method: PUT
+    user: "{{ username }}"
+    password: "{{ password }}"
+    force_basic_auth: yes
+    return_content: yes
+    validate_certs: no
+    follow_redirects: all
+    body_format: json
+    body: 
+      email_from: "{{ email_from }}"
+      smtp_host: "{{ smtp_host }}"

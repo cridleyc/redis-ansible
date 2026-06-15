@@ -1,0 +1,29 @@
+---
+- hosts: all
+  gather_facts: false
+  become: yes
+  roles:
+     - install
+
+- hosts: all
+  gather_facts: false
+  become: yes
+  serial: 1
+  roles:
+     - create_cluster
+- hosts: all[0]
+# these vars are used only for the update_certs play
+  vars:
+    certs:
+      - "cm"
+      - "api"
+      - "proxy"
+      - "syncer"
+      - "metrics_exporter"
+  roles:
+     - update_license
+     - create_local_user
+     - ldap_update
+     - add_ldap_mapping
+     - update_certs
+     - create_databases

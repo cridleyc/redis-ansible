@@ -1,0 +1,30 @@
+- name: Retrieving ldap mapping(s) on "{{ inventory_hostname }}"
+  ansible.builtin.uri:
+    url: "https://{{ inventory_hostname }}:9443/v1/ldap_mappings"
+    user: "{{ username }}"
+    password: "{{ password }}"
+    method: GET
+    force_basic_auth: yes
+    validate_certs: no
+  no_log: false
+  register: current_maps
+
+- name: LDAP mappings
+  ansible.builtin.debug:
+    msg: "{{ current_maps.json }}"
+
+- name: Retrieving roles on "{{ inventory_hostname }}"
+  ansible.builtin.uri:
+    url: "https://{{ inventory_hostname }}:9443/v1/roles"
+    user: "{{ username }}"
+    password: "{{ password }}"
+    method: GET
+    force_basic_auth: yes
+    validate_certs: no
+  no_log: false
+  register: current_roles
+
+- name: Current Roles
+  ansible.builtin.debug:
+    msg: "{{ current_roles }}"
+

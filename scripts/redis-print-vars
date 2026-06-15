@@ -1,0 +1,7 @@
+#!/bin/bash
+set -euo pipefail
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_env.sh"
+
+# Print vars from first member of an inventory - used for debugging
+ansible-playbook -i "$(inventory_path "$1")" "$(playbook_path print_vars.yaml)"

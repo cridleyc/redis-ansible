@@ -1,0 +1,9 @@
+#!/bin/bash
+set -euo pipefail
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_env.sh"
+
+# Print version of this package from group_vars/all/main.yaml 
+# used for version control - there is a role that will print this
+# as part of a playbook
+grep "rl_ansible_vers" "$re_ansbase/inventory/group_vars/all/main.yaml"

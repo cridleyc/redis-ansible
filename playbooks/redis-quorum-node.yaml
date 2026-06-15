@@ -1,0 +1,4 @@
+---
+- hosts: all[0]
+  roles:
+     - quorum_node

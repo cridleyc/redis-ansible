@@ -1,0 +1,29 @@
+---
+- name: getting the list of databases 
+  ansible.builtin.uri:
+    url: "https://{{ inventory_hostname }}:9443/v1/bdbs"
+    user: "{{ username }}"
+    password: "{{ password }}"
+    method: GET
+    force_basic_auth: yes
+    validate_certs: no
+  register: bdb_list
+
+- name: "getting uid for database "
+  ansible.builtin.set_fact:
+    bdb_id: "{{ bdb_list.json | json_query(query) | first | default(\"\") }}"
+  vars:
+    query: "[?name=='{{ db_name }}'].uid"
+  ignore_errors: yes 
+
+- name: Delete database using Redis API call {{ bdb_id }}
+  ansible.builtin.uri:
+    url: "https://{{ inventory_hostname }}:9443/v1/bdbs/{{ bdb_id }}"
+    method: DELETE
+    user: "{{ username }}"
+    password: "{{ password }}"
+    force_basic_auth: yes
+    return_content: yes
+    validate_certs: no
+    follow_redirects: all
+  ignore_errors: no

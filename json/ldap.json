@@ -1,0 +1,11 @@
+{
+    "ldap": {
+        "uris": [
+            "ldap://ldap.redis.org:389"
+        ],
+        "bind_dn": "rl_admin",
+        "bind_pass": "BIGsecret",
+        "user_dn_template": "cn=%u,dc=rlabs,dc=org",
+        "dn_group_attr": "MemberOf"
+    }
+}

@@ -1,0 +1,154 @@
+- name: getting crdb_databases from {{ clusterAPI }}
+  ansible.builtin.uri:
+    url: "https://{{ clusterAPI }}/v1/crdbs"
+    user: "{{ clusterUser }}"
+    password: "{{ clusterPass }}"
+    method: GET
+    force_basic_auth: yes
+    validate_certs: no 
+    return_content: yes
+    follow_redirects: all 
+  connection: local
+  no_log: true
+  register: result
+
+- name: set CRDB file locations
+  ansible.builtin.set_fact:
+    crdb_source_dir: "{{ crdb_files | default((playbook_dir | dirname) ~ '/crdbs/') }}"
+    crdb_source_file: >-
+      {{
+        re_json
+        if (re_json.startswith('/') or '/' in re_json)
+        else (crdb_files | default((playbook_dir | dirname) ~ '/crdbs/')) ~ re_json
+      }}
+    crdb_tmp_dir: "{{ lookup('env', 'TMPDIR') | default('/tmp', true) }}"
+    crdb_tmp_file: "{{ (lookup('env', 'TMPDIR') | default('/tmp', true)) ~ '/' ~ (re_json | basename) }}"
+
+- name: Display crdb file 
+  ansible.builtin.debug:
+    msg: "input: {{ crdb_source_file }} copy: {{ crdb_tmp_file }}"
+
+- name: copy crdb json
+# copy json body to tmp location so var substitutions
+# can be made - dbname, user/pass for clusters, etc
+  ansible.builtin.copy:
+    src: "{{ crdb_source_file }}"
+    dest: "{{ crdb_tmp_file }}"
+    mode: "0600"
+  connection: local
+
+- name: replace user1
+  ansible.builtin.replace:
+    path: "{{ crdb_tmp_file }}"
+    regexp: "_user1_"
+    replace: "{{ user1 | default('') }}"
+  connection: local
+
+- name: replace pwd1
+  ansible.builtin.replace:
+    path: "{{ crdb_tmp_file }}"
+    regexp: "_password1_"
+    replace: "{{ password1 | default('') }}"
+  connection: local
+
+- name: replace user2
+  ansible.builtin.replace:
+    path: "{{ crdb_tmp_file }}"
+    regexp: "_user2_"
+    replace: "{{ user2 | default('') }}"
+  connection: local
+
+- name: replace pwd2
+  ansible.builtin.replace:
+    path: "{{ crdb_tmp_file }}"
+    regexp: "_password2_"
+    replace: "{{ password2 | default('') }}"
+  connection: local
+
+- name: replace dbname
+  ansible.builtin.replace:
+    path: "{{ crdb_tmp_file }}"
+    regexp: "_dbname_"
+    replace: "{{ dbname | default('') }}"
+  connection: local
+
+- name: get the json from "{{ re_json }}"
+  ansible.builtin.slurp:
+    src: "{{ crdb_tmp_file }}"
+  connection: local
+  register: jresult
+
+- name: Save json to re_crdb
+  ansible.builtin.set_fact:
+    re_crdb: "{{ jresult.content | b64decode | from_json }}"
+
+- name: set dbname from json
+  ansible.builtin.set_fact:
+    dbname: "{{ re_crdb.name }}"
+
+- name: database name to be created
+  ansible.builtin.debug:
+    msg: "{{ re_crdb.name }}"
+
+#- name: print list of existing crdbs
+#  debug:
+#    var: item
+#  loop: "{{result | json_query('json.crdbs[*].name') }}"
+
+# if dbname is found crdb_exists will be set to an integer value
+# if dbname is not found it will be ""
+- name: checking if crdb_database {{ dbname }} already exists
+  ansible.builtin.set_fact:
+    crdb_exists: "{{ result.json | json_query(query) | first | default(\"\") }}"
+  vars:
+    query: "crdbs[?name=='{{ dbname }}'].protocol_version"
+  ignore_errors: yes
+
+- name: Database {{ dbname }} exists
+  ansible.builtin.debug:
+    msg: "Error: Database {{ dbname }} already exists"
+  when: crdb_exists != ""
+
+- name: creating crdb using {{ clusterAPI}}
+  ansible.builtin.uri:
+    url: "https://{{ clusterAPI }}/v1/crdbs"
+    user: "{{ clusterUser }}"
+    password: "{{ clusterPass }}"
+    method: POST
+    body: "{{ re_crdb }}"
+    body_format: json
+    force_basic_auth: yes
+    validate_certs: no
+    return_content: yes
+    follow_redirects: all
+  connection: local
+  ignore_errors: yes
+  when: crdb_exists == ""
+  register: result2
+
+
+- name: create step results
+  ansible.builtin.debug:
+    msg: "{{ result2 }}"
+
+- name: task creation id
+  ansible.builtin.debug:
+    msg: "{{ result2.json.id }}"
+  when: crdb_exists == ""
+
+- name: check if crdb {{ re_crdb.default_db_config.name }} was created successfully
+  ansible.builtin.uri:
+    url: "https://{{ clusterAPI }}/v1/crdb_tasks/{{ result2.json.id }}"
+    user: "{{ clusterUser }}"
+    password: "{{ clusterPass }}"
+    method: GET
+    force_basic_auth: yes
+    validate_certs: no
+    return_content: yes
+    follow_redirects: all
+  connection: local
+  when: crdb_exists == ""
+  register: result3
+  until: result3.json.status == 'finished'
+  delay: 10
+  retries: 10

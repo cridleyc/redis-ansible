@@ -1,0 +1,28 @@
+---
+
+- name: Build cluster certificate payload
+  ansible.builtin.set_fact:
+    cluster_certificates: "{{ (cluster_certificates | default([])) + [certificate_payload] }}"
+  vars:
+    certificate_payload:
+      name: "{{ item }}"
+      certificate: "{{ lookup('file', cert_dir ~ '/' ~ item ~ '/ca.crt') }}"
+      key: "{{ lookup('file', cert_dir ~ '/' ~ item ~ '/ca.key') }}"
+  loop: "{{ certs }}"
+  no_log: true
+
+- name: Update cluster certificates
+  ansible.builtin.uri:
+    url: "https://{{ inventory_hostname }}:9443/v1/cluster/certificates"
+    method: PUT
+    user: "{{ username }}"
+    password: "{{ password }}"
+    force_basic_auth: yes
+    return_content: yes
+    validate_certs: no
+    follow_redirects: all
+    body:
+      certificates: "{{ cluster_certificates | default([]) }}"
+    body_format: json
+  ignore_errors: no
+  no_log: true

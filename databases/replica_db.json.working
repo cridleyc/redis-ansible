@@ -1,0 +1,8 @@
+replicadb: {
+   "memory_size" : 204800,
+   "name" : "{{ rplc_db_name }}",
+   "port" : 12104,
+   "replica_sources": [{
+    "compression": 0,
+    "uri": "redis://admin:dO4CdLZcnI9pTnaIlAX9JPQmw7Frdyhdzkw4He2nfLkeIFS1@127.0.0.1:12000"}]
+}

@@ -1,0 +1,18 @@
+---
+# first time will find the master and upgrade it
+- hosts: all
+  serial: 1
+  become: yes
+  vars:
+    upgrade_master: true
+  roles:
+     - upgrade 
+
+# second pass will upgrade whomever is left
+- hosts: all
+  serial: 1
+  become: yes
+  vars:
+    upgrade_master: false
+  roles:
+     - upgrade 

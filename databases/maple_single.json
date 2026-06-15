@@ -1,0 +1,9 @@
+{"item": {"name": "Maple",
+         "memory_size": 21474800,
+         "port": 12001,
+         "proxy_policy": "all-nodes",
+         "sharding": false,
+         "replication": false,
+         "authentication_redis_pass": "ImSafeNow"
+         }
+}

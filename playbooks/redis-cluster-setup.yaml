@@ -1,0 +1,10 @@
+---
+- hosts: all
+  gather_facts: yes
+  become: yes
+  serial: 1
+  roles:
+     - install
+     - create_cluster
+     - update_license
+

@@ -1,0 +1,5 @@
+---
+- hosts: all[0]
+  serial: 1
+  roles:
+    - create_database

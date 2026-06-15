@@ -1,0 +1,1 @@
+curl -k -u "admin@rlabs.org:admin" -H 'Content-type: application/json' -X DELETE https://$1:9443/v1/bdbs/$2

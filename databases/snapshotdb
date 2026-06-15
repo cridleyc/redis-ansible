@@ -1,0 +1,10 @@
+---
+re_databases:
+  - name: snapshot-backup
+    memory_size: 204800
+    port: 12002
+    sharding: true
+    shards_count: 6
+    data_persistence: snapshot
+    snapshot_policy : [{"secs" : 21600, "writes" : 1}]
+...

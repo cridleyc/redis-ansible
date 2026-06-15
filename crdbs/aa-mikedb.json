@@ -1,0 +1,54 @@
+{
+  "default_db_config": {
+    "memory_size": 209715200,
+    "port": 12000,
+    "shards_count": 4,
+    "shard_key_regex": [
+      {
+        "regex": ".*\\{(?<tag>.*)\\}.*"
+      },
+      {
+        "regex": "(?<tag>.*)"
+      }
+    ],
+    "sharding": true,
+    "shards_placement": "sparse",
+    "replication": true
+  },
+  "instances": [
+    {
+      "cluster": {
+        "name": "redis-enterprise.south.svc.cluster.local",
+        "url": "https://api.south.35.184.26.54.nip.io:443",
+        "credentials": {
+          "username": "admin@south-cluster.com",
+          "password": "EzhGEcW4"
+        },
+        "replication_endpoint": "mikedb-db.south.35.184.26.54.nip.io:443",
+        "replication_tls_sni": "mikedb-db.south.35.184.26.54.nip.io"
+      },
+      "db_config": {
+        "tls_mode": "enabled",
+        "enforce_client_authentication": "disabled"
+      }
+    },
+    {
+      "cluster": {
+        "name": "redis-enterprise.north.svc.cluster.local",
+        "url": "https://api.north.34.27.172.204.nip.io:443",
+        "credentials": {
+          "username": "admin@north-cluster.com",
+          "password": "3CDRLgr0"
+        },
+        "replication_endpoint": "mikedb.north.34.27.172.204.nip.io:443",
+        "replication_tls_sni": "mikedb-db.north.34.27.172.204.nip.io"
+      },
+      "db_config": {
+        "tls_mode": "enabled",
+        "enforce_client_authentication": "disabled"
+      }
+    }
+  ],
+  "name": "mikedb",
+  "encryption": true
+}

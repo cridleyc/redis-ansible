@@ -1,0 +1,7 @@
+--- 
+# add ansible_user to group redislabs
+- name: add "{{ remuser }}" to redislabs group
+  ansible.builtin.user:
+    name: "{{ remuser }}"
+    groups: redislabs,root
+    append: yes

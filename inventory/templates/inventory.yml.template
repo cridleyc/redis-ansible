@@ -1,0 +1,52 @@
+---
+# Inventory template for Redis Enterprise playbooks.
+#
+# Usage notes:
+# 1. Rename the group below to match your group_vars file name.
+#    Example:
+#      inventory/group_vars/redis_cluster.yml
+#      inventory/redis_cluster.yml
+# 2. In the current create_cluster role, the first host listed under "hosts"
+#    becomes the bootstrap master.
+# 3. You can define hosts by IP directly, or use a host alias plus ansible_host.
+# 4. internal_ip/external_ip may be defined inline here or moved to host_vars/.
+
+redis_cluster:
+  hosts:
+    redis-node-1:
+      ansible_host: "34.120.10.11"
+      internal_ip: "10.0.1.11"
+      external_ip: "34.120.10.11"
+      # rack_id: "rack-a"
+      # quorum_node: 3
+
+    redis-node-2:
+      ansible_host: "34.120.10.12"
+      internal_ip: "10.0.1.12"
+      external_ip: "34.120.10.12"
+      # rack_id: "rack-b"
+
+    redis-node-3:
+      ansible_host: "34.120.10.13"
+      internal_ip: "10.0.1.13"
+      external_ip: "34.120.10.13"
+      # rack_id: "rack-c"
+
+# Example: use IP addresses directly as inventory hosts.
+#
+# redis_cluster:
+#   hosts:
+#     10.0.1.11:
+#       external_ip: "34.120.10.11"
+#     10.0.1.12:
+#       external_ip: "34.120.10.12"
+#     10.0.1.13:
+#       external_ip: "34.120.10.13"
+#
+# Example: use private IP only, when SSH and cluster traffic use the same address.
+#
+# redis_cluster:
+#   hosts:
+#     10.0.1.11:
+#     10.0.1.12:
+#     10.0.1.13:

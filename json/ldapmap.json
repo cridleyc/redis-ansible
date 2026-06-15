@@ -1,0 +1,6 @@
+"ldap_mapping": {
+             "name": "Admins",
+             "dn": "OU=ops.group,DC=redislabs,DC=com",
+             "email": "ops.group@redislabs.com",
+             "role_uids": [1]
+             }

@@ -1,0 +1,12 @@
+---
+- name: Delete database using Redis API call {{ bdb_id }}
+  ansible.builtin.uri:
+    url: "https://{{ inventory_hostname }}:9443/v1/bdbs/{{ bdb_id }}"
+    method: DELETE
+    user: "{{ username }}"
+    password: "{{ password }}"
+    force_basic_auth: yes
+    return_content: yes
+    validate_certs: no
+    follow_redirects: all
+  ignore_errors: no

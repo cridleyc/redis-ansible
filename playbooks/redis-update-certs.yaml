@@ -1,0 +1,13 @@
+---
+- hosts: all[0]
+  serial: 1
+  gather_facts: false
+  vars:
+    certs:
+      - "cm"
+      - "api"
+      - "proxy"
+      - "syncer"
+      - "metrics_exporter"
+  roles:
+    - update_certs

@@ -1,0 +1,24 @@
+rl_ansible_vers: 4.0
+ansible_user: mikeclapper
+redislabs_path: /opt/redislabs/bin
+redis_software_version: "7.22.2"
+redis_software_build: "133"
+redis_download_base_url: "https://s3.amazonaws.com/redis-enterprise-software-downloads"
+install_dir: /tmp/re_install
+persistent_path: /var/opt/redislabs/persist
+ephemeral_path: /var/opt/redislabs/tmp
+pause_seconds: 15
+flash_path: /var/opt/redislabs/flash
+flash_enabled: false
+
+# Optional installer arguments for custom layouts.
+re_install_answer_file: ""
+re_socket_dir: ""
+re_install_dir: ""
+re_config_dir: ""
+re_var_dir: ""
+re_os_user: ""
+re_os_group: ""
+re_update_env_path: false
+re_skip_dns_port_verification: false
+re_install_extra_args: []

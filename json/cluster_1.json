@@ -1,0 +1,14 @@
+{
+"instances": [
+    {
+      "cluster": {
+        "address": "tf-mc-clstr-1",
+        "apiport": "9443",
+        "credentials": {
+          "username": "admin@rlabs.org",
+          "password": "admin"
+        }
+      }
+    }
+  ]
+}

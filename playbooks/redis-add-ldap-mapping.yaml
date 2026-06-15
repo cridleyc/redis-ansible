@@ -1,0 +1,6 @@
+---
+- hosts: all[0]
+  serial: 1
+  roles:
+    - add_ldap_mapping
+  gather_facts: no

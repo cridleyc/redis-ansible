@@ -1,0 +1,6 @@
+{"bdb": { name: mikedb,
+ "memory_size": 21474800,
+ "proxy_policy": "single",
+ "sharding": false,
+ }
+}

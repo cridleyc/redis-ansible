@@ -1,0 +1,34 @@
+- name: Retrieving ldap mapping(s) on "{{ inventory_hostname }}"
+  ansible.builtin.uri:
+    url: "https://{{ inventory_hostname }}:9443/v1/ldap_mappings"
+    user: "{{ username }}"
+    password: "{{ password }}"
+    method: GET
+    force_basic_auth: yes
+    validate_certs: no
+  no_log: false
+  register: current_maps
+
+- name: LDAP mappings
+  ansible.builtin.debug:
+    msg: "{{ current_maps }}"
+
+- name: LDAP map_uid
+  ansible.builtin.debug:
+    msg: "Will update map id: {{ map_uid }}"
+
+- name: Update LDAP mapping
+  ansible.builtin.uri: 
+    url: "https://{{ inventory_hostname }}:9443/v1/ldap_mappings/{{map_uid}}"
+    user: "{{ username }}"
+    password: "{{ password }}"
+    method: PUT
+    body: "{{ ldap_mapping }}"
+    body_format: json
+    force_basic_auth: yes
+    return_content: yes
+    follow_redirects: all
+    validate_certs: no
+  ignore_errors: yes
+  no_log: false
+

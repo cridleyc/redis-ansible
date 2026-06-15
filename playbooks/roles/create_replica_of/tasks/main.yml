@@ -1,0 +1,55 @@
+# src_db_name - name of source db
+# rplc_db_name - name of replica_of db
+
+- name: getting databases on {{ inventory_hostname }}
+  ansible.builtin.uri:
+    url: "https://{{ inventory_hostname }}:9443/v1/bdbs"
+    user: "{{ username }}"
+    password: "{{ password }}"
+    method: GET
+    force_basic_auth: yes
+    validate_certs: no
+  register: result
+
+- name: "checking if replica database already exists"
+  ansible.builtin.set_fact:
+    db_uid: "{{ result.json | json_query(query) | first | default(\"\") }}"
+  vars:
+    query: "[?name=='{{ rplc_db_name }}'].uid"
+  ignore_errors: yes 
+
+- name: "getting admin password for src database "
+  ansible.builtin.set_fact:
+    src_db_pw: "{{ result.json | json_query(query) | first | default(\"\") }}"
+  vars:
+    query: "[?name=='{{ src_db_name }}'].authentication_admin_pass"
+  ignore_errors: yes 
+
+- name: debug info
+  ansible.builtin.debug:
+    msg: "src - {{ src_db_name }}  pass - {{ src_db_pw }} port - {{ src_db_port }}  repl - {{rplc_db_name }} "
+
+- name: debug yaml
+  ansible.builtin.debug:
+    msg: "replicadb - {{ replicadb }}"
+
+- name: database already exists
+  ansible.builtin.debug:
+    msg: "{{rplc_db_name}} - already exists"
+  when: db_uid != ""
+
+- name: "creating replica database"
+  ansible.builtin.uri: 
+    url: "https://{{ inventory_hostname }}:9443/v1/bdbs"
+    user: "{{ username }}"
+    password: "{{ password }}"
+    method: POST
+    body: "{{ replicadb  }}"
+    body_format: json
+    force_basic_auth: yes
+    return_content: yes
+    follow_redirects: all
+    validate_certs: no
+  ignore_errors: yes
+  when: db_uid == ""
+

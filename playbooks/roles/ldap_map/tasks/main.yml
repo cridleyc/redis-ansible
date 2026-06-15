@@ -1,0 +1,31 @@
+- name: Retrieving ldap configuration on "{{ inventory_hostname }}"
+  uri:
+    url: "https://{{ inventory_hostname }}:9443/v1/cluster/ldap"
+    user: "{{ username }}"
+    password: "{{ password }}"
+    method: GET
+    force_basic_auth: yes
+    validate_certs: no
+  no_log: true
+  register: result
+
+- name: Current LDAP configuration
+  debug:
+    msg: "{{ result }}"
+
+- name: Add/Update LDAP configuration 
+  uri: 
+    url: "https://{{ inventory_hostname }}:9443/v1/cluster/ldap"
+    user: "{{ username }}"
+    password: "{{ password }}"
+    method: PUT
+    body: "{{ ldap }}"
+    body_format: json
+    force_basic_auth: yes
+    return_content: yes
+    follow_redirects: all
+    validate_certs: no
+  ignore_errors: yes
+#  when: uid == ""
+  no_log: false
+

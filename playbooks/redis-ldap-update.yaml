@@ -1,0 +1,5 @@
+---
+- hosts: all[0]
+  gather_facts: false
+  roles:
+    - ldap_update

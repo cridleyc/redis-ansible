@@ -1,0 +1,43 @@
+- name: Retrieving local users on "{{ inventory_hostname }}"
+  ansible.builtin.uri:
+    url: "https://{{ inventory_hostname }}:9443/v1/users"
+    user: "{{ username }}"
+    password: "{{ password }}"
+    method: GET
+    force_basic_auth: yes
+    validate_certs: no
+  register: result
+  no_log: false
+
+- name: display users
+  ansible.builtin.debug:
+    msg: "{{ result }}"
+
+- name: "Set User Name as Fact"
+  ansible.builtin.set_fact:
+    dead_user: "{{ user.name }}"
+
+- name: "checking if user '{{ dead_user }}' exists"
+  ansible.builtin.set_fact:
+    uid: "{{ result.json | json_query(query) | first | default(\"\") }}"
+  vars:
+    query: "[?name=='{{ dead_user }}'].uid"
+  ignore_errors: yes 
+
+- name: "deleting user '{{ dead_user }}'  on '{{ inventory_hostname }}'"
+  ansible.builtin.uri: 
+    url: "https://{{ inventory_hostname }}:9443/v1/users/{{ uid }}"
+    user: "{{ username }}"
+    password: "{{ password }}"
+    method: DELETE
+    body: "{{ user }}"
+    body_format: json
+    force_basic_auth: yes
+    return_content: yes
+    follow_redirects: all
+    validate_certs: no
+  ignore_errors: yes
+  register: deleteresult
+  when: uid != ""
+  no_log: false
+

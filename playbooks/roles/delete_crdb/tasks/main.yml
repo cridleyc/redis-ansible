@@ -1,0 +1,19 @@
+---
+- name: Delete CRDB
+  ansible.builtin.uri:
+    url: "https://{{ clusterAPI }}/v1/crdbs/{{ crdb_id }}"
+    method: DELETE
+    user: "{{ clusterUser }}"
+    password: "{{ clusterPass }}"
+    force_basic_auth: yes
+    return_content: no
+    validate_certs: no
+    follow_redirects: all
+  ignore_errors: no
+  register: crdb_out
+  connection: local
+  no_log: true
+
+- name: crdb task id for delete
+  ansible.builtin.debug:
+    msg: "{{ crdb_out.json.id }}"

@@ -1,0 +1,9 @@
+---
+- hosts: all
+  gather_facts: no
+  become: yes
+  vars:
+    rungroup: "root"
+    runuser: "root"
+  roles:
+     - systune

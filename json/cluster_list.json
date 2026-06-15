@@ -1,0 +1,44 @@
+{
+"instances": [
+    {
+      "cluster": {
+        "address": "tf-mc-rhel8-1",
+        "apiport": "9443",
+        "credentials": {
+          "username": "admin@rlabs.org",
+          "password": "admin"
+        }
+      }
+    },
+    {
+      "cluster": {
+        "address": "tf-mc-clstr-1",
+        "apiport": "9443",
+        "credentials": {
+          "username": "admin@rlabs.org",
+          "password": "admin"
+        }
+      }
+    },
+    {
+      "cluster": {
+        "address": "api.north.xx.xx.xx.204.nip.io",
+        "apiport": "443",
+        "credentials": {
+          "username": "admin@north-cluster.com",
+          "password": "3CDRLgr0"
+        }
+      }
+    },
+    {
+      "cluster": {
+        "address": "api.south.xx.xx.xx.54.nip.io",
+        "apiport": "443",
+        "credentials": {
+          "username": "admin@south-cluster.com",
+          "password": "EzhGEcW4"
+        }
+      }
+    }
+  ]
+}

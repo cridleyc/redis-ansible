@@ -1,0 +1,6 @@
+---
+- hosts: localhost
+  serial: 1
+  roles:
+    - delete_crdb
+  gather_facts: no

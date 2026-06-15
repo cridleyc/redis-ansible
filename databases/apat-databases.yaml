@@ -1,0 +1,48 @@
+# set of databases use for testing APAT - if needed these can be
+# broken out into separate yaml files - memory limits are very small
+# by default.  It is necessary to apply non-demo license to accommodate
+# the number of shards - the script redis-update-license.sh will 
+# apply the license defined in the source.sh script
+---
+re_databases:
+  - name: tls-oss-aof
+    memory_size: 204800
+    port: 12001
+    sharding: false
+    replication: true
+    data_persistence: aof
+    aof_policy: appendfsync-always
+    shards_placement: sparse
+    proxy_policy: all-master-shards
+    oss_cluster: true
+    oss_sharding: true
+    tls_mode: enabled
+    authentication_ssl_client_certs: [{"client_cert": "-----BEGIN CERTIFICATE-----\nMIIEUDCCAjigAwIBAgIUWIuYTzOLWFpzDN2uIpGyaK6Q/+4wDQYJKoZIhvcNAQEL\nBQAwNTETMBEGA1UECgwKUmVkaXMgVGVzdDEeMBwGA1UEAwwVQ2VydGlmaWNhdGUg\nQXV0aG9yaXR5MB4XDTIzMDcyNTIwNTc0MloXDTI0MDcyNDIwNTc0MlowKzETMBEG\nA1UECgwKUmVkaXMgVGVzdDEUMBIGA1UEAwwLQ2xpZW50LW9ubHkwggEiMA0GCSqG\nSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCpdpSn2bNVo7V9l+HxapDhK+s6zGkG6e0Y\naazbB/SzeWcm8n9O+c6rvxaqnUpXmvnKjEcxaOyg6GkOx8vrlZDNIGOYSU7IKg7g\n9poUDq/S2904yoqI035vGw0lP04MpIeUrGTChZv1CT5JPPvq89FOcW0wwN1QyHmJ\nlv6FV10Bq8PssWw5obArGibJPmTuGdOL7iP5XWbiozv157sA8SkkybW7g2Z+aDU/\n83fVsnOQmFOKnVBOhcPSrx919YrMHqnVP8ZA+n5ggePsnl2df4ZFi598/OC4pcKT\nIKy3z/M9uG9fsDS7kofSFjvMr0jWf+t/p17vkp/uNxeqAZ8FxbdBAgMBAAGjYjBg\nMAsGA1UdDwQEAwIFoDARBglghkgBhvhCAQEEBAMCB4AwHQYDVR0OBBYEFGSTIlUg\nHKfcLRRSu7pnWUFZxv2mMB8GA1UdIwQYMBaAFGyroeIF6zYc7iFIJua5P+1zspcb\nMA0GCSqGSIb3DQEBCwUAA4ICAQAL0teLs2UrMvWQWoRin1AH5bSgZYx8LQtHscTP\nqi91pKRi0t1oljvaLk0T/TnHJ1p/xDR9oqovQWlcKrm+LEcE/06DmNnsoWtMkfeQ\nSyUaS29L/GVz7REX3glhEyl3T0IUd1t/k0ND2yBlTheOTnKIj3uH02c6V9lZzRP7\nH8Jn6EVxjZHfSn8/9ju1YXpldq9sKPP6msYlW5r9D9BL7/HfPaUg0iloqyIl51T6\ni1UojvOmKYnXZy+jed7KhWdbfmntYGYITFhE2ooUzbYD/U0i5i3UtrGWQru10Arw\nRhvctZI6wihWzdo/y9IsUKIpTr2L0Txviw47IjJrZx3xJ3VyHQ9BqSE2hWBXc3qy\nPbS7edac9bstsEETV9qURXgocBEE3Ezc5QiUiFuS7LJxTmN3EO7tpY0nClthKNCH\nHU6l3B7S0UpMprGuwo5S3BO30LnnxR8yTZy43bf0hV9Ko1jNi1CbejUQdtzevYIW\nPZPmJWm4IZggFjM+YKhpmLG6DP2QqX+wmwv4Suo++JBQEJs6412jAhnBH4MusVyE\nDtmsSX6q1lVOeXeuUL5eV+c8NHqkNK5ZfClYfdsC/jQXnEuQ4wjis7skmRVKw4UT\nrNWb69eGCs6iAqO9iAAAMn/f8oC6eQXiel+FoPnnLrRj9yUaB6tCFOB83MSpWxmx\ngp8XsA==\n-----END CERTIFICATE-----\n\n"}]
+
+# create a clustered replicated database with 10 shards
+# backed up via snapshot every 6 hours
+# note: you need to update the cluster license first
+# the shell script redis-update-license.sh will apply a 
+# poc license - the license file is set in the source.sh file
+  - name: clustered-replicated-snapshot-backup
+    memory_size: 204800
+    port: 12002
+    sharding: true
+    shards_count: 10
+    shard_key_regex: [{
+         "regex" : ".*\\{(?<tag>.*)\\}.*"
+      },
+      {
+         "regex" : "(?<tag>.*)"
+      }]
+    replication: true
+    data_persistence: snapshot
+    snapshot_policy : [{"secs" : 21600, "writes" : 1}]
+    shards_placement: sparse
+
+  # create a source db with password to be use by a replica_of db
+  - name: sourcedb
+    port: 12003
+    memory_size: 204800
+    sharding: false
+...

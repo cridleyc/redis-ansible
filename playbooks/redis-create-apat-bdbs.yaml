@@ -1,0 +1,12 @@
+# used for creating test bdbs for APAT testing
+# create_databases role runs first so create_replica_of can find
+# the sourcedb..... this can probably be improved in the next version
+# the replica_of play has to fetch the admin password from the sourcedb
+# for MVP this is the simplest way
+---
+- hosts: all[0]
+  serial: 1
+  roles:
+    - create_databases
+    - create_replica_of
+  gather_facts: no

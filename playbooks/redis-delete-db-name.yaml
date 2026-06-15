@@ -1,0 +1,7 @@
+# needs to be called with bdb_id - e.g. '-e 'bdb_id=1234'
+---
+- hosts: all[0]
+  serial: 1
+  gather_facts: false
+  roles:
+    - delete_db_name

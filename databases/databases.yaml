@@ -1,0 +1,59 @@
+---
+re_databases:
+  - name: "Maple"
+    memory_size: 2147483648
+    port: 12001
+    proxy_policy: all-nodes
+    sharding: false
+    replication: true
+    shards_placement: sparse
+    authentication_redis_pass: "ImSafeNow"
+#
+  - name: "RedOak"
+    memory_size: 4294967296 
+    port: 12002
+    proxy_policy: all-nodes
+    sharding: true
+    shards_count: 2
+    replication: true
+    shards_placement: "sparse"
+    shard_key_regex: [{
+         "regex" : ".*\\{(?<tag>.*)\\}.*"
+      },
+      {
+         "regex" : "(?<tag>.*)"
+      }]
+    authentication_redis_pass: "ImSafeNow"
+#
+  - name: "Mahogany"
+    memory_size: 4294967296 
+    port: 12003
+    proxy_policy: all-nodes
+    sharding: true
+    shards_count: 4
+    replication: false
+    shards_placement: sparse
+    shard_key_regex: [{
+         "regex" : ".*\\{(?<tag>.*)\\}.*"
+      },
+      {
+         "regex" : "(?<tag>.*)"
+      }]
+    authentication_redis_pass: "ImSafeNow"
+#
+  - name: "Walnut"
+    memory_size: 12884901888 
+    port: 12005
+    proxy_policy: all-nodes
+    sharding: true
+    shards_count: 12
+    replication: false
+    shards_placement: "sparse"
+    shard_key_regex: [{
+         "regex" : ".*\\{(?<tag>.*)\\}.*"
+      },
+      {
+         "regex" : "(?<tag>.*)"
+      }]
+    authentication_redis_pass: "ImSafeNow"
+...

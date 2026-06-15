@@ -1,0 +1,11 @@
+---
+re_databases:
+  - name: "mikedb"
+    memory_size: 1288490188
+    port: 12005
+    default_user: false
+    proxy_policy: all-nodes
+    sharding: false
+    replication: false
+    shards_placement: "sparse"
+    authentication_redis_pass: "ImSafeNow"

@@ -1,0 +1,17 @@
+---
+# set node designed in inventory file to quorum_only
+# node is designed by adding 'quorum_node=<n>' to the 
+# first line in the inventory file.  <n> can be any node
+# in the cluster, but it has to be set on the first line
+# <n> is an integer - not a string (no quotes)
+- name: set quorum node
+  ansible.builtin.command: "sudo /opt/redislabs/bin/rladmin tune node {{ quorum_node }} quorum_only enabled"
+  register: quorum_output
+  when:
+    - quorum_node is defined
+
+- name: quorum node set
+  ansible.builtin.debug:
+    msg: 'Node {{ quorum_node }} is now a quorum node...'
+  when:
+    - "'Finished successfully' in quorum_output.stdout"

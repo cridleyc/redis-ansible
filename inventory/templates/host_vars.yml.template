@@ -1,0 +1,25 @@
+---
+# Guide for per-host variables.
+#
+# Copy this file as:
+#   inventory/host_vars/<hostname>.yml
+#
+# <hostname> must match the name used in the inventory.
+
+# IP used by the node's internal API.
+# If not defined, some roles will try to derive it from gathered facts.
+internal_ip: "10.0.0.10"
+
+# External-facing IP or address.
+# If not defined, create_cluster falls back to internal_ip.
+external_ip: "34.100.20.30"
+
+# Optional. Only needed if the cluster uses rack awareness.
+# Must be defined per node.
+# rack_id: "rack-a"
+
+# Optional. Only needed if you use redis-set-quorum-node.yaml.
+# This value is usually defined on the first host in the inventory or
+# on the host entry used as the execution point.
+# Must be the numeric node id expected by rladmin.
+# quorum_node: 3

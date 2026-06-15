@@ -1,0 +1,43 @@
+- name: Retrieving local users on "{{ inventory_hostname }}"
+  ansible.builtin.uri:
+    url: "https://{{ inventory_hostname }}:9443/v1/users"
+    user: "{{ username }}"
+    password: "{{ password }}"
+    method: GET
+    force_basic_auth: yes
+    validate_certs: no
+  no_log: true
+  register: result
+
+- name: "Set User Name as Fact"
+  ansible.builtin.set_fact:
+    new_user: "{{ user.name }}"
+
+- name: "checking if user '{{ new_user }}' exists"
+  ansible.builtin.set_fact:
+    uid: "{{ result.json | json_query(query) | first | default(\"\") }}"
+  vars:
+    query: "[?name=='{{ new_user }}'].uid"
+  ignore_errors: yes 
+
+- name: Does user exist?
+  ansible.builtin.debug:
+    msg: "User {{ new_user }} does not exist - use 'create_local_user to add"
+  when: uid == ""
+
+- name: updating user "{{ new_user }}"
+  ansible.builtin.uri: 
+    url: "https://{{ inventory_hostname }}:9443/v1/users/{{uid}}"
+    user: "{{ username }}"
+    password: "{{ password }}"
+    method: PUT
+    body: "{{ user }}"
+    body_format: json
+    force_basic_auth: yes
+    return_content: yes
+    follow_redirects: all
+    validate_certs: no
+  ignore_errors: yes
+  when: uid != ""
+  no_log: true
+

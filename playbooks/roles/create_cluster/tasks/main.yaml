@@ -1,0 +1,174 @@
+---
+# This task is to setup/config Redis Enterprise via the REST API.
+- name: Gather default IPv4 facts when internal_ip is not provided
+  ansible.builtin.setup:
+    filter: ansible_default_ipv4
+  when: internal_ip is not defined
+
+- name: setting master host as the first host in the inventory
+  ansible.builtin.set_fact:
+    master_host: "{{ groups['all'][0] }}"
+    rack_awareness: "{{ hostvars[inventory_hostname].rack_id is defined }}"
+    quorum_node: "{{ hostvars[inventory_hostname].quorum_node is defined }}"
+
+- name: using rack-zone awareness
+  ansible.builtin.set_fact:
+    rack_id: "{{ hostvars[inventory_hostname].rack_id }}"
+  when: hostvars[inventory_hostname].rack_id is defined
+
+- name: setting the rack id
+  ansible.builtin.set_fact:
+    rack_id: "{{ hostvars[inventory_hostname].rack_id }}"
+  when: hostvars[inventory_hostname].rack_id is defined
+
+- name: setting internal IP to {{ inventory_hostname }}
+  ansible.builtin.set_fact:
+    internal_ip: "{{ ansible_facts.default_ipv4.address }}"
+  when:
+    - internal_ip is not defined
+    - ansible_facts.default_ipv4 is defined
+
+- name: fail when internal_ip cannot be determined
+  ansible.builtin.fail:
+    msg: "internal_ip is required when Ansible cannot gather ansible_default_ipv4 for {{ inventory_hostname }}"
+  when: internal_ip is not defined
+  
+- name: setting external IP to {{ internal_ip }}
+  ansible.builtin.set_fact:
+    external_ip: "{{ internal_ip }}"
+  when: external_ip is not defined
+  
+- name: setting master internal IP to specified internal IP
+  ansible.builtin.set_fact:
+    master_ip: "{{ hostvars[master_host].internal_ip }}"
+  when: hostvars[master_host].internal_ip is defined
+  
+- name: setting master internal IP to {{ inventory_hostname }}
+  ansible.builtin.set_fact:
+    master_ip: "{{ master_host }}"
+  when: hostvars[master_host].internal_ip is not defined
+
+- name: setting facts
+  ansible.builtin.set_fact:
+    bootstrap_url: "https://{{ internal_ip }}:9443/v1/bootstrap"
+    create_url: "https://{{ internal_ip }}:9443/v1/bootstrap/create_cluster"
+    join_url: "https://{{ internal_ip }}:9443/v1/bootstrap/join_cluster"
+    create_cluster_policy_url: "https://{{ internal_ip }}:9443/v1/cluster/policy"
+
+- name: setting the am I the master flag
+  ansible.builtin.set_fact:
+    i_am_the_master: "{{ master_ip == internal_ip }}"
+
+# Check bootstrapped
+- name: check to see if this node is in the cluster
+  ansible.builtin.uri:
+    url: "{{ bootstrap_url }}"
+    method: GET
+    user: "{{ username }}"
+    password: "{{ password }}"
+    force_basic_auth: yes
+    return_content: yes
+    validate_certs: no
+    follow_redirects: all
+  register: bootstap_request
+
+- name: is this node cluster joined?
+  ansible.builtin.set_fact:
+    cluster_joined: "{{ bootstap_request is defined and bootstap_request.json.bootstrap_status.state == 'completed' }}"
+
+- name: is the cluster rack aware
+  ansible.builtin.debug:
+    msg: 'Creating a cluster with rack awareness...'
+  when:
+    - rack_awareness
+
+- name: Creating Cluster for RedisLabs via REST API
+  ansible.builtin.uri:
+    url: "{{ create_url }}"
+    method: POST
+    user: "{{ username }}"
+    password: "{{ password }}"
+    force_basic_auth: yes
+    return_content: yes
+    validate_certs: no
+    follow_redirects: all
+    body: "{{ lookup('template','create_cluster.json.j2') }}"
+    body_format: json
+  when:
+    - i_am_the_master
+    - not cluster_joined
+
+
+- name: Join Cluster for RedisLabs via REST API
+  ansible.builtin.uri:
+    url: "{{ join_url }}"
+    method: POST
+    user: "{{ username }}"
+    password: "{{ password }}"
+    force_basic_auth: yes
+    return_content: yes
+    validate_certs: no
+    follow_redirects: all
+    body: "{{ lookup('template','join_cluster.json.j2') }}"
+    body_format: json
+  when:
+    - not i_am_the_master
+    - not cluster_joined
+
+- name: checking to see if we've completed bootstrapping
+  ansible.builtin.uri:
+    url: "{{ bootstrap_url }}"
+    method: GET
+    user: "{{ username }}"
+    password: "{{ password }}"
+    force_basic_auth: yes
+    return_content: yes
+    validate_certs: no
+    follow_redirects: all
+  register: bootstrap_status
+  until: bootstrap_status.json.bootstrap_status.state == 'completed'
+  delay: 12 
+  retries: 10
+  when:
+    - not cluster_joined
+
+- name: Get cluster policy
+  ansible.builtin.uri:
+    url: "{{ create_cluster_policy_url }}"
+    method: GET
+    user: "{{ username }}"
+    password: "{{ password }}"
+    force_basic_auth: true
+    return_content: true
+    validate_certs: false
+    follow_redirects: all
+  register: create_cluster_policy
+  when:
+    - i_am_the_master
+    - rack_awareness
+
+- name: Enable rack awareness policy
+  ansible.builtin.uri:
+    url: "{{ create_cluster_policy_url }}"
+    method: PUT
+    user: "{{ username }}"
+    password: "{{ password }}"
+    force_basic_auth: true
+    return_content: true
+    validate_certs: false
+    follow_redirects: all
+    body:
+      rack_aware: true
+    body_format: json
+  when:
+    - i_am_the_master
+    - rack_awareness
+    - not create_cluster_policy.json.rack_aware | default(false)
+
+#- name: bootstrap status
+#  debug:
+#    msg: 'bootstrap_status = {{ bootstrap_status }}'
+
+- name: what node is this
+  ansible.builtin.debug:
+    msg: 'Node ID {{ (bootstrap_status.json | default(bootstap_request.json)).local_node_info.uid }} has joined the cluster'

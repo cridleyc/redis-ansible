@@ -1,0 +1,97 @@
+---
+- name: Create installation directory
+  ansible.builtin.file:
+    path: "{{ install_dir }}"
+    recurse: true
+    state: directory
+
+- name: Downloading and Extracting install bundle
+  ansible.builtin.unarchive:
+    src: "{{ re_url }}"
+    dest: "{{ install_dir }}"
+    remote_src: true
+    creates: "{{ install_dir }}/install.sh"
+
+- name: build install.sh command arguments
+  ansible.builtin.set_fact:
+    install_command_argv:
+      - "{{ install_dir }}/install.sh"
+      - "-y"
+
+- name: add answer file to install command
+  ansible.builtin.set_fact:
+    install_command_argv: "{{ install_command_argv + ['-c', re_install_answer_file] }}"
+  when: re_install_answer_file | default('') | length > 0
+
+- name: add socket directory to install command
+  ansible.builtin.set_fact:
+    install_command_argv: "{{ install_command_argv + ['-s', re_socket_dir] }}"
+  when: re_socket_dir | default('') | length > 0
+
+- name: add custom install directory to install command
+  ansible.builtin.set_fact:
+    install_command_argv: "{{ install_command_argv + ['--install-dir', re_install_dir] }}"
+  when: re_install_dir | default('') | length > 0
+
+- name: add custom config directory to install command
+  ansible.builtin.set_fact:
+    install_command_argv: "{{ install_command_argv + ['--config-dir', re_config_dir] }}"
+  when: re_config_dir | default('') | length > 0
+
+- name: add custom var directory to install command
+  ansible.builtin.set_fact:
+    install_command_argv: "{{ install_command_argv + ['--var-dir', re_var_dir] }}"
+  when: re_var_dir | default('') | length > 0
+
+- name: add custom OS user to install command
+  ansible.builtin.set_fact:
+    install_command_argv: "{{ install_command_argv + ['--os-user', re_os_user] }}"
+  when: re_os_user | default('') | length > 0
+
+- name: add custom OS group to install command
+  ansible.builtin.set_fact:
+    install_command_argv: "{{ install_command_argv + ['--os-group', re_os_group] }}"
+  when: re_os_group | default('') | length > 0
+
+- name: enable PATH updates during install when requested
+  ansible.builtin.set_fact:
+    install_command_argv: "{{ install_command_argv + ['--update-env-path'] }}"
+  when: re_update_env_path | default(false)
+
+- name: Add DNS and port verification skip when requested
+  ansible.builtin.set_fact:
+    install_command_argv: "{{ install_command_argv + ['--skip-dns-port-verification'] }}"
+  when: re_skip_dns_port_verification | default(false)
+
+- name: append extra install arguments
+  ansible.builtin.set_fact:
+    install_command_argv: "{{ install_command_argv + re_install_extra_args }}"
+  when: re_install_extra_args | default([]) | length > 0
+
+- name: running install.sh
+  ansible.builtin.command:
+    argv: "{{ install_command_argv }}"
+  args:
+    creates: /opt/redislabs/bin
+    chdir: "{{ install_dir }}"
+  register: result
+
+- name: set install succeeded
+  ansible.builtin.set_fact:
+    install_success: true
+  when: '"ALL TESTS PASSED" in result.stdout'
+
+- name: set install failed
+  ansible.builtin.set_fact:
+    install_success: false
+  when: '"ALL TESTS PASSED" not in result.stdout'
+  
+- name: dump install stdout when install is unsuccessful 
+  ansible.builtin.debug:
+    msg: "Installation was unsuccessful - review following stdout\n{{ result }}"
+  when: install_success != true
+
+- name: Installation was successful
+  ansible.builtin.debug:
+    msg: "Installation completed successfully - rlcheck ran successfully"
+  when: install_success == true

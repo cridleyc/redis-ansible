@@ -1,0 +1,122 @@
+- name: "setting internal IP to specified internal IP"
+  ansible.builtin.set_fact:
+    ip_int_node: "{{ internal_ip }}"
+  when: internal_ip is defined
+
+- name: setting internal IP to {{ inventory_hostname }}
+  ansible.builtin.set_fact:
+    ip_int_node: "{{ inventory_hostname }}"
+    internal_ip: "{{ inventory_hostname }}"
+  when: internal_ip is not defined
+
+- name: "getting bootstrap details from {{ inventory_hostname }}"
+  ansible.builtin.uri:
+    url: "https://{{ inventory_hostname }}:9443/v1/bootstrap"
+    user: "{{ username }}"
+    password: "{{ password }}"
+    method: GET
+    force_basic_auth: yes
+    validate_certs: no
+    return_content: yes
+    follow_redirects: all
+  register: bootstrap_result
+
+- name: "getting the version of redis enterprise on this node {{ inventory_hostname }}"
+  ansible.builtin.set_fact:
+    software_version: "{{ bootstrap_result.json.local_node_info.software_version }}"
+
+- debug:
+    msg: System {{ inventory_hostname }} software_version={{ software_version }} going to upgrade to {{ re_url }}
+    verbosity: 0
+
+- name: skip the upgrade on this node
+  ansible.builtin.set_fact:
+    skip_upgrade: "{{ re_url is search(software_version) }}"
+
+- name: "getting list of nodes {{ inventory_hostname }}"
+  ansible.builtin.uri:
+    url: "https://{{ inventory_hostname }}:9443/v1/nodes"
+    user: "{{ username }}"
+    password: "{{ password }}"
+    method: GET
+    force_basic_auth: yes
+    validate_certs: no
+    return_content: yes
+    follow_redirects: all
+  register: result
+
+- name: "getting my node id for {{ inventory_hostname }}"
+  ansible.builtin.set_fact:
+    uid: "{{ result.json | json_query(query1) }}"
+    accept_servers: "{{ result.json | json_query(query2) }}"
+  vars:
+    query1: "[?addr =='{{ internal_ip }}'].uid | [0]"
+    query2: "[?addr =='{{ internal_ip }}'].accept_servers | [0]"
+
+- name: Exit if we can't parse the uid for the node
+  ansible.builtin.fail:
+    msg: "UID is not a valid number"
+  when: uid | int <= 0
+
+- name: "getting node status from {{ inventory_hostname }}"
+  ansible.builtin.uri:
+    url: "https://{{ inventory_hostname }}:9443/v1/nodes/status"
+    user: "{{ username }}"
+    password: "{{ password }}"
+    method: GET
+    force_basic_auth: yes
+    validate_certs: no
+    return_content: yes
+    follow_redirects: all
+  register: nodes_status
+
+- name: "I am the master node?"
+  ansible.builtin.set_fact:
+    i_am_the_master: "{{ (nodes_status.json[uid | string].role | default('')) == 'master' }}"
+
+- debug:
+    msg: I am the master {{ i_am_the_master }}
+    verbosity: 0
+
+- name: "Upgrade the master only?"
+  ansible.builtin.set_fact:
+    skip_upgrade: "{{ skip_upgrade or (upgrade_master and not i_am_the_master) }}"
+
+- debug:
+    msg: System {{ internal_ip }} uid={{ uid }} accept_servers={{ accept_servers }}
+    verbosity: 0
+
+- name: delete "{{ install_dir }}"
+  when: not skip_upgrade
+  ansible.builtin.file:
+    state: absent
+    path: "{{ install_dir }}"
+  become: true
+
+- name: Create {{ install_dir }} directory
+  when: not skip_upgrade
+  ansible.builtin.file:
+    path: "{{ install_dir }}"
+    recurse: yes
+    state: directory
+  become: true
+
+- name: Download and extract '{{ re_url }}'
+  when: not skip_upgrade
+  ansible.builtin.unarchive:
+    src: "{{ re_url }}"
+    dest: "{{ install_dir }}"
+    remote_src: yes
+    creates: "{{ install_dir }}/install.sh"
+  become: true
+
+- name: run {{ install_dir }}/install.sh
+  when: not skip_upgrade
+  ansible.builtin.command: "{{ install_dir }}/install.sh -y"
+  args:
+    chdir: "{{ install_dir }}"
+  become: true
+
+- pause:
+    seconds: "{{ pause_seconds }}"
+  when: not skip_upgrade

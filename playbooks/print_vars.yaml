@@ -1,0 +1,8 @@
+# this playbook can be used to dump the vars from a specified host
+# in the inventory file
+---
+- hosts: all
+  serial: 1
+  roles:
+    - print_vers
+    - print_vars

@@ -1,0 +1,8 @@
+replicadb:
+  name: "replica-db"
+  memory_size: 204800
+  port: 12006
+  proxy_policy: "all-nodes"
+  replica_sources:
+    - compression: 0
+      uri: "redis://admin:<source_db_password>@127.0.0.1:12000"

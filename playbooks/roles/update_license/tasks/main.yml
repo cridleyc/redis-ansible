@@ -1,0 +1,16 @@
+---
+- name: Update the license of the Redis Enterprise Cluster via REST API
+  ansible.builtin.uri:
+    url: "https://{{ inventory_hostname }}:9443/v1/license"
+    method: PUT
+    user: "{{ username }}"
+    password: "{{ password }}"
+    force_basic_auth: yes
+    return_content: no
+    validate_certs: no
+    follow_redirects: all
+    body:
+      license: "{{ lookup('file', re_license) }}"
+    body_format: json
+  ignore_errors: no
+  run_once: true
