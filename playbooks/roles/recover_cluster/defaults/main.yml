@@ -1,0 +1,21 @@
+---
+# Recovery is intentionally opt-in because it replaces cluster membership.
+recover_cluster_confirm: false
+recover_cluster_filename: "{{ persistent_path | default('/var/opt/redislabs/persist') }}/ccs/ccs-redis.rdb"
+recover_cluster_master_node_uid: 1
+
+# Set this when the first inventory host is not reachable through its
+# internal_ip, ansible_host, or inventory name.
+recover_cluster_member_ip: ""
+
+# Match these values to the installation and recovery storage layout.
+recover_cluster_persistent_path: "{{ persistent_path | default('/var/opt/redislabs/persist') }}"
+recover_cluster_ephemeral_path: "{{ ephemeral_path | default('/var/opt/redislabs') }}"
+recover_cluster_ccs_persistent_path: ""
+# These inherit optional per-host inventory variables when they exist.
+recover_cluster_rack_id: "{{ rack_id | default('') }}"
+recover_cluster_second_rack_id: "{{ second_rack_id | default('') }}"
+recover_cluster_override_rack_id: false
+recover_cluster_flash_enabled: "{{ flash_enabled | default(false) }}"
+recover_cluster_flash_path: "{{ flash_path | default('/var/opt/redislabs/flash') }}"
+recover_cluster_rladmin_path: "{{ redislabs_path | default('/opt/redislabs/bin') }}/rladmin"

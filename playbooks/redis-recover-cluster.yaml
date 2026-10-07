@@ -1,0 +1,12 @@
+---
+- name: Recover Redis Enterprise cluster and rejoin replacement nodes
+  hosts: all
+  order: inventory
+  serial: 1
+  gather_facts: false
+  become: true
+  vars:
+    recover_cluster_confirm: true
+    recover_cluster_filename: /var/tmp/ccs-redis.rdb
+  roles:
+    - recover_cluster

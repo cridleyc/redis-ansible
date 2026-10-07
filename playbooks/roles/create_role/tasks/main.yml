@@ -1,0 +1,103 @@
+---
+- name: Set role definitions from re_roles list
+  ansible.builtin.set_fact:
+    redis_roles_to_create: "{{ re_roles }}"
+  when: re_roles is defined
+
+- name: Set role definition from redis_role object
+  ansible.builtin.set_fact:
+    redis_roles_to_create: "{{ [redis_role] }}"
+  when:
+    - re_roles is not defined
+    - redis_role is defined
+
+- name: Validate role definitions were provided
+  ansible.builtin.assert:
+    that:
+      - redis_roles_to_create is defined
+      - redis_roles_to_create | length > 0
+    fail_msg: "Provide re_roles: [...] or redis_role: {...} with -e @roles/<file>.yaml"
+
+- name: Set Redis Enterprise API endpoint for role management
+  ansible.builtin.set_fact:
+    redis_roles_api_host: "{{ redis_api_host | default(internal_ip | default(ansible_host | default(inventory_hostname))) }}"
+    redis_roles_api_port: "{{ redis_api_port | default(9443) }}"
+    redis_roles_api_timeout: "{{ redis_api_timeout | default(30) }}"
+
+- name: Validate Redis Enterprise API endpoint for role management
+  ansible.builtin.assert:
+    that:
+      - redis_roles_api_host is defined
+      - redis_roles_api_host | length > 0
+      - "'$(' not in redis_roles_api_host"
+      - "' ' not in redis_roles_api_host"
+      - "'|' not in redis_roles_api_host"
+      - "'http://' not in redis_roles_api_host"
+      - "'https://' not in redis_roles_api_host"
+    fail_msg: >-
+      Set redis_api_host to the Redis Enterprise API hostname or IP address without
+      protocol or port. YAML inventory does not execute shell commands in ansible_host.
+
+- name: Validate role payloads
+  ansible.builtin.assert:
+    that:
+      - item.name is defined
+      - item.name | length > 0
+      - item.management is defined
+      - item.management in redis_role_management_values
+    fail_msg: "Each role requires name and management. management must be one of {{ redis_role_management_values | join(', ') }}"
+  vars:
+    redis_role_management_values:
+      - db_viewer
+      - db_member
+      - cluster_viewer
+      - cluster_member
+      - user_manager
+      - admin
+  loop: "{{ redis_roles_to_create }}"
+  loop_control:
+    label: "{{ item.name | default('missing-name') }}"
+
+- name: Retrieve existing Redis Enterprise roles
+  ansible.builtin.uri:
+    url: "https://{{ redis_roles_api_host }}:{{ redis_roles_api_port }}/v1/roles"
+    user: "{{ username }}"
+    password: "{{ password }}"
+    method: GET
+    force_basic_auth: yes
+    validate_certs: no
+    return_content: yes
+    follow_redirects: all
+    use_proxy: false
+    timeout: "{{ redis_roles_api_timeout }}"
+  register: redis_existing_roles
+
+- name: Report existing Redis Enterprise roles
+  ansible.builtin.debug:
+    msg: "Role {{ item.name }} already exists; skipping create."
+  when: (redis_existing_roles.json | default([]) | selectattr('name', 'equalto', item.name) | list | length) > 0
+  loop: "{{ redis_roles_to_create }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Create Redis Enterprise role
+  ansible.builtin.uri:
+    url: "https://{{ redis_roles_api_host }}:{{ redis_roles_api_port }}/v1/roles"
+    user: "{{ username }}"
+    password: "{{ password }}"
+    method: POST
+    body: "{{ item }}"
+    body_format: json
+    force_basic_auth: yes
+    return_content: yes
+    follow_redirects: all
+    validate_certs: no
+    use_proxy: false
+    timeout: "{{ redis_roles_api_timeout }}"
+    status_code:
+      - 200
+      - 201
+  when: (redis_existing_roles.json | default([]) | selectattr('name', 'equalto', item.name) | list | length) == 0
+  loop: "{{ redis_roles_to_create }}"
+  loop_control:
+    label: "{{ item.name }}"

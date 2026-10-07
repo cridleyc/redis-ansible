@@ -1,0 +1,10 @@
+---
+- hosts: all[0]
+  serial: 1
+  connection: local
+  become: false
+  gather_facts: false
+  vars:
+    ansible_become: false
+  roles:
+    - create_role

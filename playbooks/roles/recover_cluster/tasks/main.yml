@@ -1,0 +1,216 @@
+---
+- name: Validate cluster recovery configuration
+  ansible.builtin.assert:
+    that:
+      - recover_cluster_confirm | bool
+      - recover_cluster_filename is string
+      - recover_cluster_filename | length > 0
+      - recover_cluster_master_node_uid | int > 0
+      - ansible_play_hosts_all | length > 0
+    fail_msg: >-
+      Cluster recovery is destructive. Set recover_cluster_confirm=true and
+      provide a valid recover_cluster_filename before running this playbook.
+
+- name: Validate Redis Enterprise credentials for recovery joins
+  ansible.builtin.assert:
+    that:
+      - username is defined
+      - username | length > 0
+      - password is defined
+      - password | length > 0
+    fail_msg: username and password are required to join recovered cluster nodes.
+  when: ansible_play_hosts_all | length > 1
+
+- name: Set recovery cluster host facts
+  ansible.builtin.set_fact:
+    recover_cluster_primary_host: "{{ ansible_play_hosts_all | first }}"
+    recover_cluster_inventory_index: "{{ ansible_play_hosts_all.index(inventory_hostname) }}"
+
+- name: Gather default IPv4 facts when internal_ip is not provided
+  ansible.builtin.setup:
+    filter: ansible_default_ipv4
+  when: internal_ip is not defined
+
+- name: Set internal IP from discovered facts
+  ansible.builtin.set_fact:
+    internal_ip: "{{ ansible_facts.default_ipv4.address }}"
+  when:
+    - internal_ip is not defined
+    - ansible_facts.default_ipv4 is defined
+
+- name: Set recovered cluster member IP
+  ansible.builtin.set_fact:
+    recover_cluster_member_address: >-
+      {{ recover_cluster_member_ip | default(
+           hostvars[recover_cluster_primary_host].internal_ip | default(
+             hostvars[recover_cluster_primary_host].ansible_host | default(recover_cluster_primary_host)
+           ),
+           true
+         ) }}
+
+- name: Verify recovery file exists on the recovery node
+  ansible.builtin.stat:
+    path: "{{ recover_cluster_filename }}"
+  register: recover_cluster_file
+  when: inventory_hostname == recover_cluster_primary_host
+
+- name: Fail when the recovery file is unavailable
+  ansible.builtin.assert:
+    that:
+      - recover_cluster_file.stat.exists
+      - recover_cluster_file.stat.isreg
+    fail_msg: >-
+      Recovery file {{ recover_cluster_filename }} is not available on
+      {{ inventory_hostname }}. Mount or copy the recovery storage before recovery.
+  when: inventory_hostname == recover_cluster_primary_host
+
+- name: Build Redis Enterprise cluster recovery command
+  ansible.builtin.set_fact:
+    recover_cluster_command_argv:
+      - "{{ recover_cluster_rladmin_path }}"
+      - cluster
+      - recover
+      - filename
+      - "{{ recover_cluster_filename }}"
+      - node_uid
+      - "{{ recover_cluster_master_node_uid }}"
+      - ephemeral_path
+      - "{{ recover_cluster_ephemeral_path }}"
+      - persistent_path
+      - "{{ recover_cluster_persistent_path }}"
+  when: inventory_hostname == recover_cluster_primary_host
+
+- name: Add optional CCS recovery path
+  ansible.builtin.set_fact:
+    recover_cluster_command_argv: >-
+      {{ recover_cluster_command_argv + ['ccs_persistent_path', recover_cluster_ccs_persistent_path] }}
+  when:
+    - inventory_hostname == recover_cluster_primary_host
+    - recover_cluster_ccs_persistent_path | length > 0
+
+- name: Add optional rack ID to recovery command
+  ansible.builtin.set_fact:
+    recover_cluster_command_argv: >-
+      {{ recover_cluster_command_argv + ['rack_id', recover_cluster_rack_id] }}
+  when:
+    - inventory_hostname == recover_cluster_primary_host
+    - recover_cluster_rack_id | length > 0
+
+- name: Add optional second rack ID to recovery command
+  ansible.builtin.set_fact:
+    recover_cluster_command_argv: >-
+      {{ recover_cluster_command_argv + ['second_rack_id', recover_cluster_second_rack_id] }}
+  when:
+    - inventory_hostname == recover_cluster_primary_host
+    - recover_cluster_second_rack_id | length > 0
+
+- name: Add optional rack override to recovery command
+  ansible.builtin.set_fact:
+    recover_cluster_command_argv: "{{ recover_cluster_command_argv + ['override_rack_id'] }}"
+  when:
+    - inventory_hostname == recover_cluster_primary_host
+    - recover_cluster_override_rack_id | bool
+
+- name: Add flash storage options to recovery command
+  ansible.builtin.set_fact:
+    recover_cluster_command_argv: >-
+      {{ recover_cluster_command_argv + ['flash_enabled', 'flash_path', recover_cluster_flash_path] }}
+  when:
+    - inventory_hostname == recover_cluster_primary_host
+    - recover_cluster_flash_enabled | bool
+
+- name: Recover Redis Enterprise cluster on first inventory node
+  ansible.builtin.command:
+    argv: "{{ recover_cluster_command_argv }}"
+  register: recover_cluster_result
+  when: inventory_hostname == recover_cluster_primary_host
+
+- name: Set sequential node ID for cluster replacement
+  ansible.builtin.set_fact:
+    recover_cluster_replace_node_id: "{{ recover_cluster_inventory_index | int + 1 }}"
+  when: inventory_hostname != recover_cluster_primary_host
+
+- name: Build Redis Enterprise cluster join command
+  ansible.builtin.set_fact:
+    recover_cluster_join_command_argv:
+      - "{{ recover_cluster_rladmin_path }}"
+      - cluster
+      - join
+      - nodes
+      - "{{ recover_cluster_member_address }}"
+      - username
+      - "{{ username }}"
+      - password
+      - "{{ password }}"
+      - replace_node
+      - "{{ recover_cluster_replace_node_id }}"
+      - ephemeral_path
+      - "{{ recover_cluster_ephemeral_path }}"
+      - persistent_path
+      - "{{ recover_cluster_persistent_path }}"
+  no_log: true
+  when: inventory_hostname != recover_cluster_primary_host
+
+- name: Add optional CCS recovery path to join command
+  ansible.builtin.set_fact:
+    recover_cluster_join_command_argv: >-
+      {{ recover_cluster_join_command_argv + ['ccs_persistent_path', recover_cluster_ccs_persistent_path] }}
+  no_log: true
+  when:
+    - inventory_hostname != recover_cluster_primary_host
+    - recover_cluster_ccs_persistent_path | length > 0
+
+- name: Add optional rack ID to join command
+  ansible.builtin.set_fact:
+    recover_cluster_join_command_argv: >-
+      {{ recover_cluster_join_command_argv + ['rack_id', recover_cluster_rack_id] }}
+  no_log: true
+  when:
+    - inventory_hostname != recover_cluster_primary_host
+    - recover_cluster_rack_id | length > 0
+
+- name: Add optional second rack ID to join command
+  ansible.builtin.set_fact:
+    recover_cluster_join_command_argv: >-
+      {{ recover_cluster_join_command_argv + ['second_rack_id', recover_cluster_second_rack_id] }}
+  no_log: true
+  when:
+    - inventory_hostname != recover_cluster_primary_host
+    - recover_cluster_second_rack_id | length > 0
+
+- name: Add optional rack override to join command
+  ansible.builtin.set_fact:
+    recover_cluster_join_command_argv: "{{ recover_cluster_join_command_argv + ['override_rack_id'] }}"
+  no_log: true
+  when:
+    - inventory_hostname != recover_cluster_primary_host
+    - recover_cluster_override_rack_id | bool
+
+- name: Add flash storage options to join command
+  ansible.builtin.set_fact:
+    recover_cluster_join_command_argv: >-
+      {{ recover_cluster_join_command_argv + ['flash_enabled', 'flash_path', recover_cluster_flash_path] }}
+  no_log: true
+  when:
+    - inventory_hostname != recover_cluster_primary_host
+    - recover_cluster_flash_enabled | bool
+
+- name: Join node to recovered Redis Enterprise cluster
+  ansible.builtin.command:
+    argv: "{{ recover_cluster_join_command_argv }}"
+  no_log: true
+  when: inventory_hostname != recover_cluster_primary_host
+
+- name: Verify recovered cluster status after final join
+  ansible.builtin.command:
+    argv:
+      - "{{ recover_cluster_rladmin_path }}"
+      - status
+  register: recover_cluster_status
+  changed_when: false
+  when: inventory_hostname == (ansible_play_hosts_all | last)
+
+- name: Display recovered cluster status
+  ansible.builtin.debug:
+    var: recover_cluster_status.stdout_lines
+  when: inventory_hostname == (ansible_play_hosts_all | last)

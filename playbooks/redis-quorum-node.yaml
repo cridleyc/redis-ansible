@@ -1,4 +1,7 @@
 ---
 - hosts: all[0]
+  vars:
+    # Used only when quorum_node is not provided.
+    quorum_node_memory_threshold_gb: 2
   roles:
      - quorum_node

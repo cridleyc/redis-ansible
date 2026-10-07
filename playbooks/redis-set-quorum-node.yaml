@@ -2,6 +2,9 @@
 - hosts: all[0]
   serial: 1
   gather_facts: false
+  vars:
+    # Set a node to quorum_only. If quorum_node is not provided, discover the
+    # first node with total RAM below quorum_node_memory_threshold_gb.
+    quorum_node_memory_threshold_gb: 4
   roles:
      - quorum_node
-

@@ -1,0 +1,8 @@
+---
+- name: Configure Redis Enterprise for load balancer access
+  hosts: all[0]
+  serial: 1
+  gather_facts: false
+  become: true
+  roles:
+    - configure_load_balancer

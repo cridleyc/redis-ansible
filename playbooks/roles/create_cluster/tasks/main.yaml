@@ -70,11 +70,21 @@
     return_content: yes
     validate_certs: no
     follow_redirects: all
+    status_code:
+      - 200
+      - 202
+      - 404
+      - 500
+      - 502
+      - 503
   register: bootstap_request
+  until: (bootstap_request.json | default({})).get('bootstrap_status', {}).get('state', '') != ''
+  delay: "{{ bootstrap_wait_delay | default(12) }}"
+  retries: "{{ bootstrap_wait_retries | default(30) }}"
 
 - name: is this node cluster joined?
   ansible.builtin.set_fact:
-    cluster_joined: "{{ bootstap_request is defined and bootstap_request.json.bootstrap_status.state == 'completed' }}"
+    cluster_joined: "{{ (bootstap_request.json | default({})).get('bootstrap_status', {}).get('state', '') == 'completed' }}"
 
 - name: is the cluster rack aware
   ansible.builtin.debug:
@@ -125,10 +135,17 @@
     return_content: yes
     validate_certs: no
     follow_redirects: all
+    status_code:
+      - 200
+      - 202
+      - 404
+      - 500
+      - 502
+      - 503
   register: bootstrap_status
-  until: bootstrap_status.json.bootstrap_status.state == 'completed'
-  delay: 12 
-  retries: 10
+  until: (bootstrap_status.json | default({})).get('bootstrap_status', {}).get('state', '') == 'completed'
+  delay: "{{ bootstrap_wait_delay | default(12) }}"
+  retries: "{{ bootstrap_wait_retries | default(30) }}"
   when:
     - not cluster_joined
 
@@ -165,10 +182,10 @@
     - rack_awareness
     - not create_cluster_policy.json.rack_aware | default(false)
 
-#- name: bootstrap status
-#  debug:
-#    msg: 'bootstrap_status = {{ bootstrap_status }}'
+- name: Set final bootstrap response
+  ansible.builtin.set_fact:
+    create_cluster_bootstrap_response: "{{ bootstrap_status.json | default(bootstap_request.json | default({})) }}"
 
 - name: what node is this
   ansible.builtin.debug:
-    msg: 'Node ID {{ (bootstrap_status.json | default(bootstap_request.json)).local_node_info.uid }} has joined the cluster'
+    msg: "Node ID {{ create_cluster_bootstrap_response.get('local_node_info', {}).get('uid', 'unknown') }} has joined the cluster"

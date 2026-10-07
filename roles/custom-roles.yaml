@@ -1,0 +1,8 @@
+---
+re_roles:
+  - name: "App DB Viewer"
+    management: "db_viewer"
+  - name: "App DB Member"
+    management: "db_member"
+  - name: "Operations User Manager"
+    management: "user_manager"

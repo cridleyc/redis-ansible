@@ -23,3 +23,8 @@ external_ip: "34.100.20.30"
 # on the host entry used as the execution point.
 # Must be the numeric node id expected by rladmin.
 # quorum_node: 3
+
+# Optional. Used only when quorum_node is not provided.
+# Nodes with total RAM below this threshold are eligible for automatic
+# quorum-only selection.
+# quorum_node_memory_threshold_gb: 2

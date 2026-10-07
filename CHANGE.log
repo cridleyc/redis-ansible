@@ -68,6 +68,8 @@ Version 4.0 updates the Redis Enterprise Ansible template from the previous 3.0 
 - Added a fail-fast guard when `internal_ip` cannot be determined.
 - Added defaulting of `external_ip` to `internal_ip` when `external_ip` is not supplied.
 - Added cluster bootstrap status checks before create/join actions.
+- Hardened bootstrap polling so temporary non-JSON API responses during cluster creation do not fail conditional evaluation.
+- Added configurable bootstrap polling controls with `bootstrap_wait_delay` and `bootstrap_wait_retries`.
 - Updated cluster create and join payloads to support optional flash/bigstore configuration.
 - Added rack ID handling for rack-aware deployments.
 - Moved rack-aware cluster policy configuration to the documented cluster policy endpoint after bootstrap.
@@ -115,10 +117,38 @@ Version 4.0 updates the Redis Enterprise Ansible template from the previous 3.0 
 - Updated version output to read the bundle version from `rl_ansible_vers`.
 - Kept local user payloads as editable examples for lab and customer-specific adaptation.
 
+### Role Management Updates
+
+- Added `playbooks/redis-create-role.yaml` to create Redis Enterprise roles through `POST /v1/roles`.
+- Added `playbooks/roles/create_role/tasks/main.yml` with idempotent role creation based on existing role names from `GET /v1/roles`.
+- Added `scripts/redis-create-role.sh` as the wrapper for local CLI usage.
+- Added a top-level `roles/` payload directory with example role definitions in `roles/custom-roles.yaml`.
+- Added support for both `re_roles` list payloads and a single `redis_role` object payload.
+- Added validation for supported Redis Enterprise role `management` values.
+
 ### Quorum Node Updates
 
 - Fixed quorum-node task condition handling.
 - Preserved quorum-only node configuration through `rladmin tune node <node_id> quorum_only enabled`.
+- Added automatic quorum node discovery from `rladmin status nodes` when `quorum_node` is not provided.
+- Added RAM-based quorum candidate selection with `quorum_node_memory_threshold_gb`, defaulting to `2`.
+- Declared `quorum_node_memory_threshold_gb` directly in quorum playbooks so the automatic selection condition is visible and easy to override.
+- Updated `scripts/redis-quorum-node.sh` so the quorum node ID is optional and additional Ansible arguments can be passed through.
+
+### Load Balancer Configuration
+
+- Added `playbooks/redis-configure-load-balancer.yaml` and the `configure_load_balancer` role.
+- Configured the default sharded and non-sharded proxy policies through `rladmin tune cluster`, with `all-nodes` as the adjustable default.
+- Enabled `rladmin cluster config handle_redirects` by default for clusters accessed through a load balancer without DNS redirects.
+- Added validation of proxy policy values and post-change verification through `rladmin info cluster`.
+
+### Cluster Recovery
+
+- Added `playbooks/redis-recover-cluster.yaml` and the `recover_cluster` role for Redis Enterprise cluster recovery.
+- The first host in inventory order runs `rladmin cluster recover` with configurable recovery filename and `node_uid`, defaulting to node UID `1`.
+- Remaining hosts join serially through `rladmin cluster join ... replace_node <id>`, with replacement node IDs assigned sequentially from inventory order (`2`, `3`, and so on).
+- Added configurable persistent, ephemeral, CCS, rack, and flash recovery parameters to support customer-specific storage layouts.
+- Added a mandatory `recover_cluster_confirm=true` safety gate and recovery-file validation before cluster recovery begins.
 
 ### LDAP and License Workflows
 
@@ -164,8 +194,22 @@ Version 4.0 updates the Redis Enterprise Ansible template from the previous 3.0 
   - https://redis.io/docs/latest/operate/rs/references/rest-api/requests/crdbs/
 - CRDB task REST API: validates `GET /v1/crdb_tasks/{task_id}` for polling Active-Active database creation task status.
   - https://redis.io/docs/latest/operate/rs/references/rest-api/requests/crdb_tasks/
+- Roles REST API: validates `GET /v1/roles` and `POST /v1/roles` for Redis Enterprise role discovery and creation.
+  - https://redis.io/docs/latest/operate/rs/references/rest-api/requests/roles/
 - `rladmin tune` command reference: validates `rladmin tune node <id> quorum_only enabled|disabled`.
   - https://redis.io/docs/latest/operate/rs/references/cli-utilities/rladmin/tune/
+- Redis Enterprise proxy policy documentation: validates the `all-nodes` proxy policy and confirms that cluster defaults affect newly created databases.
+  - https://redis.io/docs/latest/operate/rs/databases/configure/proxy-policy/
+- `rladmin tune cluster` command reference: validates `default_sharded_proxy_policy` and `default_non_sharded_proxy_policy` values.
+  - https://redis.io/docs/latest/operate/rs/references/cli-utilities/rladmin/tune/
+- `rladmin cluster config` command reference: validates `handle_redirects enabled|disabled` for clusters accessed through a load balancer.
+  - https://redis.io/docs/latest/operate/rs/references/cli-utilities/rladmin/cluster/config/
+- Redis Enterprise cluster recovery guide: validates the prerequisite workflow, recovery of the first node, sequential joining of remaining nodes, and the required database recovery follow-up.
+  - https://redis.io/docs/latest/operate/rs/clusters/cluster-recovery/
+- `rladmin cluster recover` command reference: validates `filename`, `node_uid`, and the optional storage, rack, and flash parameters used by the recovery role.
+  - https://redis.io/docs/latest/operate/rs/references/cli-utilities/rladmin/cluster/recover/
+- `rladmin cluster join` command reference: validates joining recovered nodes with credentials, storage parameters, and `replace_node`.
+  - https://redis.io/docs/latest/operate/rs/references/cli-utilities/rladmin/cluster/join/
 - `crdb-cli` command reference: validates use of `crdb-cli` for managing Active-Active databases and Active-Active tasks.
   - https://redis.io/docs/latest/operate/rs/references/cli-utilities/crdb-cli/
 

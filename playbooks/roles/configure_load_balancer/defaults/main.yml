@@ -1,0 +1,5 @@
+---
+# Cluster defaults applied to databases created after this role runs.
+redis_load_balancer_proxy_policy: all-nodes
+redis_load_balancer_handle_redirects: enabled
+redis_load_balancer_rladmin_path: "{{ redislabs_path | default('/opt/redislabs/bin') }}/rladmin"

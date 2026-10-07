@@ -24,6 +24,8 @@ install_dir: /tmp/re_install
 persistent_path: /var/opt/redislabs/persist
 ephemeral_path: /var/opt/redislabs/tmp
 pause_seconds: 15
+bootstrap_wait_delay: 12
+bootstrap_wait_retries: 30
 
 # Enable only if the cluster uses flash/bigstore.
 flash_enabled: false

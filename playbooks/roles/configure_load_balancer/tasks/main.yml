@@ -1,0 +1,54 @@
+---
+- name: Validate load balancer configuration values
+  ansible.builtin.assert:
+    that:
+      - redis_load_balancer_proxy_policy in ['single', 'all-master-shards', 'all-nodes']
+      - redis_load_balancer_handle_redirects in ['enabled', 'disabled']
+    fail_msg: >-
+      redis_load_balancer_proxy_policy must be single, all-master-shards, or
+      all-nodes; redis_load_balancer_handle_redirects must be enabled or disabled.
+
+- name: Retrieve current Redis Enterprise cluster defaults
+  ansible.builtin.command:
+    argv:
+      - "{{ redis_load_balancer_rladmin_path }}"
+      - info
+      - cluster
+  register: redis_cluster_defaults
+  changed_when: false
+
+- name: Configure default proxy policies for load balancer access
+  ansible.builtin.command:
+    argv:
+      - "{{ redis_load_balancer_rladmin_path }}"
+      - tune
+      - cluster
+      - default_sharded_proxy_policy
+      - "{{ redis_load_balancer_proxy_policy }}"
+      - default_non_sharded_proxy_policy
+      - "{{ redis_load_balancer_proxy_policy }}"
+  when: >-
+    ('default_sharded_proxy_policy: ' ~ redis_load_balancer_proxy_policy) not in redis_cluster_defaults.stdout
+    or ('default_non_sharded_proxy_policy: ' ~ redis_load_balancer_proxy_policy) not in redis_cluster_defaults.stdout
+
+- name: Configure redirect handling behind a load balancer
+  ansible.builtin.command:
+    argv:
+      - "{{ redis_load_balancer_rladmin_path }}"
+      - cluster
+      - config
+      - handle_redirects
+      - "{{ redis_load_balancer_handle_redirects }}"
+  changed_when: false
+
+- name: Verify Redis Enterprise default proxy policies
+  ansible.builtin.command:
+    argv:
+      - "{{ redis_load_balancer_rladmin_path }}"
+      - info
+      - cluster
+  register: redis_cluster_defaults_after
+  changed_when: false
+  failed_when: >-
+    ('default_sharded_proxy_policy: ' ~ redis_load_balancer_proxy_policy) not in redis_cluster_defaults_after.stdout
+    or ('default_non_sharded_proxy_policy: ' ~ redis_load_balancer_proxy_policy) not in redis_cluster_defaults_after.stdout

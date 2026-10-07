@@ -1,17 +1,62 @@
 ---
-# set node designed in inventory file to quorum_only
-# node is designed by adding 'quorum_node=<n>' to the 
-# first line in the inventory file.  <n> can be any node
-# in the cluster, but it has to be set on the first line
-# <n> is an integer - not a string (no quotes)
-- name: set quorum node
+# Set a node to quorum_only. If quorum_node is not provided, discover the
+# first node with total RAM below quorum_node_memory_threshold_gb.
+- name: Discover quorum node candidates by RAM size
+  ansible.builtin.shell: |
+    /opt/redislabs/bin/rladmin status nodes | awk -v threshold="{{ quorum_node_memory_threshold_gb | default(2) }}" '
+    /^\*?node:/ {
+      id=$1
+      gsub(/^\*?node:/, "", id)
+
+      split($8, ram, "/")
+      total=ram[2]
+      gb=""
+
+      if (total ~ /TB$/) {
+        sub(/TB$/, "", total)
+        gb=total * 1024
+      } else if (total ~ /GB$/) {
+        sub(/GB$/, "", total)
+        gb=total + 0
+      } else if (total ~ /MB$/) {
+        sub(/MB$/, "", total)
+        gb=total / 1024
+      }
+
+      if (gb != "" && gb < threshold) print id
+    }'
+  register: quorum_candidate_nodes
+  changed_when: false
+  when:
+    - quorum_node is not defined
+
+- name: Select discovered quorum node
+  ansible.builtin.set_fact:
+    quorum_node: "{{ quorum_candidate_nodes.stdout_lines | first }}"
+  when:
+    - quorum_node is not defined
+    - quorum_candidate_nodes.stdout_lines | length > 0
+
+- name: Fail when quorum node cannot be selected
+  ansible.builtin.fail:
+    msg: >-
+      quorum_node was not provided and no node was discovered with RAM below
+      {{ quorum_node_memory_threshold_gb | default(2) }}GB. Set quorum_node
+      explicitly or adjust quorum_node_memory_threshold_gb.
+  when:
+    - quorum_node is not defined
+
+- name: Display selected quorum node
+  ansible.builtin.debug:
+    msg: "Selected quorum node {{ quorum_node }}"
+
+- name: Set quorum node
   ansible.builtin.command: "sudo /opt/redislabs/bin/rladmin tune node {{ quorum_node }} quorum_only enabled"
   register: quorum_output
-  when:
-    - quorum_node is defined
 
-- name: quorum node set
+- name: Quorum node set
   ansible.builtin.debug:
     msg: 'Node {{ quorum_node }} is now a quorum node...'
   when:
+    - quorum_output is defined
     - "'Finished successfully' in quorum_output.stdout"
